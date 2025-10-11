@@ -16,7 +16,7 @@ app by Coffee Code Community.
 
 ---
 
-## 🧩 Folder Structure
+## Folder Structure
 
 ```
 finansaku-be/
@@ -37,7 +37,7 @@ finansaku-be/
 
 ---
 
-## ⚙️ Setup
+## Setup
 
 ```bash
 # 1. Install dependencies
@@ -52,7 +52,7 @@ npm run dev
 
 ---
 
-## 🗄️ Database (Prisma)
+## Database (Prisma)
 
 ```bash
 # Initialize Prisma client
@@ -64,14 +64,51 @@ npx prisma migrate dev
 
 ---
 
-## 🧠 Conventions
+## Conventions
 
-* Branch: `dev` → development, `main` → production
 * Commits follow [Conventional Commits](./docs/commit-guide.md)
+* Branch: `dev` → development, `main` → production
+
+| Branch | Description |
+|--------|--------------|
+| **main** | Stable, production-ready code |
+| **dev** | Active development branch where all features merge |
+| **feat/*** | Feature branches for new work (e.g. `feat/auth-login`, `feat/saku-crud`) |
+
+### Workflow
+
+1. Create new branch from `dev`
+
+```bash
+git checkout dev
+git pull
+git checkout -b feat/feature-name
+```
+
+2. Commit and push your changes
+
+```bash
+git push -u origin feat/feature-name
+```
+
+3. Make a Pull Request → target **dev**
+4. After review and testing → merge `dev` → **main**
+
+**Example:**
+
+```bash
+git checkout dev
+git pull
+git checkout -b feat/saku-crud
+# ...work...
+git add .
+git commit -m "feat: add Saku CRUD endpoints"
+git push -u origin feat/saku-crud
+```
 
 ---
 
-## 🧾 Documentation
+## Documentation
 
 See the [`/docs`](./docs/) folder for:
 
