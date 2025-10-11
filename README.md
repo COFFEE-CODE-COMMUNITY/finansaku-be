@@ -3,7 +3,7 @@
 (THIS IS A WORK IN PROGRESS)
 
 Backend service for **FinanSaku**, a budgeting and UMK-based financial tracker
- app by Coffee Code Community.
+app by Coffee Code Community.
 
 ---
 
