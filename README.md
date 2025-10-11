@@ -1,24 +1,37 @@
 # FinanSaku Backend
 
-(THIS IS A WORK IN PROGRESS)
+> This is Work in Progress!
 
 Backend service for **FinanSaku**, a budgeting and UMK-based financial tracker
-app by Coffee Code Community.
+app by **Coffee Code Community**.
+
+---
+
+## Overview
+
+FinanSaku backend provides:
+
+- User authentication and authorization
+- UMK and salary data management
+- Automated budget allocation logic
+- Article and announcement management
+- RESTful API for dashboard and frontend integration
 
 ---
 
 ## Tech Stack
-- **Node.js** + **Express**
+
+- **Node.js** with **Express**
 - **Prisma ORM**
 - **PostgreSQL** (Supabase)
 - **JWT Authentication**
-- **PM2 + Nginx** for deployment (on finansaku.space)
+- **PM2 + Nginx** for deployment (`api.finansaku.space`)
 
 ---
 
 ## Folder Structure
 
-```
+```bash
 finansaku-be/
 ├─ prisma/              # Prisma schema & migrations
 ├─ src/
@@ -28,12 +41,12 @@ finansaku-be/
 │  ├─ middlewares/      # Auth / validation middleware
 │  ├─ models/           # (Optional) non-Prisma data models
 │  ├─ utils/            # Helpers / utilities
-│  └─ app.js            # Main server file
+│  └─ app.js            # Main server entry
 ├─ .env.example         # Example environment variables
-├─ .gitignore
 ├─ package.json
-└─ README.md
-```
+├─ README.md
+└─ docs/                # Project documentation
+````
 
 ---
 
@@ -43,7 +56,7 @@ finansaku-be/
 # 1. Install dependencies
 npm install
 
-# 2. Copy env example
+# 2. Copy environment file
 cp .env.example .env
 
 # 3. Run in development mode
@@ -55,63 +68,70 @@ npm run dev
 ## Database (Prisma)
 
 ```bash
-# Initialize Prisma client
+# Generate Prisma client
 npx prisma generate
 
-# Run migrations
+# Run local migrations
 npx prisma migrate dev
+```
+
+To view your database in Prisma Studio:
+
+```bash
+npx prisma studio
 ```
 
 ---
 
-## Conventions
+## Branch & Commit Conventions
 
-* Commits follow [Conventional Commits](./docs/commit-guide.md)
-* Branch: `dev` → development, `main` → production
+- Commits follow [Conventional Commits](./docs/commit-guide.md)
+- Branch flow:
 
-| Branch | Description |
-|--------|--------------|
-| **main** | Stable, production-ready code |
-| **dev** | Active development branch where all features merge |
-| **feat/*** | Feature branches for new work (e.g. `feat/auth-login`, `feat/saku-crud`) |
+  - `main` → stable, production-ready branch
+  - `dev` → active development branch
+  - `feat/*` → feature branches for new work (e.g. `feat/auth-login`)
 
-### Workflow
+### Example Workflow
 
-1. Create new branch from `dev`
+1. Create a new feature branch from `dev`
 
-```bash
-git checkout dev
-git pull
-git checkout -b feat/feature-name
-```
+   ```bash
+   git checkout dev
+   git pull origin dev
+   git checkout -b feat/feature-name
+   ```
 
 2. Commit and push your changes
 
-```bash
-git push -u origin feat/feature-name
-```
+   ```bash
+   git add .
+   git commit -m "feat: add Saku CRUD endpoints"
+   git push -u origin feat/feature-name
+   ```
 
-3. Make a Pull Request → target **dev**
-4. After review and testing → merge `dev` → **main**
+3. Open a Pull Request targeting `dev`
 
-**Example:**
-
-```bash
-git checkout dev
-git pull
-git checkout -b feat/saku-crud
-# ...work...
-git add .
-git commit -m "feat: add Saku CRUD endpoints"
-git push -u origin feat/saku-crud
-```
+4. After review and testing, merge `dev` → `main`
 
 ---
 
 ## Documentation
 
-See the [`/docs`](./docs/) folder for:
+Refer to the [`/docs`](./docs) directory for full details:
 
-* API references
-* ERD diagrams
-* Backend setup guide
+| File                                                | Description                               |
+| --------------------------------------------------- | ----------------------------------------- |
+| [`backend-setup.md`](./docs/backend-setup.md)       | Local setup and environment configuration |
+| [`commit-guide.md`](./docs/commit-guide.md)         | Commit message rules                      |
+| [`contribution.md`](./docs/contribution.md)         | Collaboration and merge workflow          |
+| [`project-overview.md`](./docs/project-overview.md) | General overview and structure            |
+| [`db_erd.png`](./docs/db_erd.png)                   | Database ERD diagram                      |
+
+---
+
+## License
+
+This project is maintained under the **Coffee Code Community** capstone program.
+For questions or collaboration inquiries, please contact the backend
+maintainers.
