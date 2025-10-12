@@ -1,42 +1,51 @@
+---
+aliases: [commit-guide]
+description: Commit message standards for the FinanSaku backend team.
+lastUpdated: 2025-10-12
+maintainer: FinanSaku Backend Team
+---
 # Commit Message Guide
 
-This document defines the commit message standards for the **FinanSaku Backend**
+This document defines the commit message standards for the **FinanSaku backend**
 project.
-We follow the **Conventional Commits** convention to keep history clean and
-readable.
+
+It follows the **Conventional Commits** specification to ensure a clear and
+consistent project history.
 
 ---
 
-## Format
+## 1. Format
 
-```plaintext
+Each commit message must follow this format:
+
+```bash
 <type>: <short summary>
-```
+````
 
-**Example:**
+Example:
 
-```plaintext
+```bash
 feat: add login endpoint for auth module
 ```
 
 ---
 
-## Allowed Types
+## 2. Allowed Types
 
-| Type | Usage |
-|------|--------|
-| **feat:** | For new features or modules. |
-| **fix:** | For bug fixes. |
-| **chore:** | For setup or maintenance (configs, dependencies). |
-| **docs:** | For documentation updates (README, markdown files). |
-| **refactor:** | For code structure improvements (no behavior change). |
-| **style:** | For formatting or code style changes. |
-| **test:** | For unit or integration tests. |
-| **build:** | For dependency or build tool updates. |
+| Type         | Description                                           |
+| ------------ | ----------------------------------------------------- |
+| **feat**     | Adds a new feature or module                          |
+| **fix**      | Fixes a bug or error                                  |
+| **chore**    | Updates configuration, dependencies, or setup files   |
+| **docs**     | Updates documentation files such as `.md` or `README` |
+| **refactor** | Improves code structure without changing behavior     |
+| **style**    | Applies formatting or code style changes              |
+| **test**     | Adds or updates tests                                 |
+| **build**    | Updates build tools or package dependencies           |
 
 ---
 
-## Examples
+## 3. Examples
 
 ```bash
 feat: add user registration endpoint
@@ -48,19 +57,36 @@ refactor: simplify prisma service injection
 
 ---
 
-## Tips
+## 4. Best Practices
 
-- Use **imperative tone** (“add” not “added”).
-- Keep the **summary under 72 characters**.
-- Group related commits logically.
-- Use **squash merge** to combine small commits into one clean message.
+- Use **imperative mood** (“add”, not “added”).
+- Keep messages **under 72 characters** for readability.
+- Group related changes into a single commit.
+- Use **squash merge** to combine multiple small commits into one clean message.
+- Avoid ambiguous or vague summaries (e.g., “update stuff”, “fix things”).
 
 ---
 
-## Final Commands to Add, Commit, and Push
+## 5. Commit Workflow Example
+
+```bash
+git add .
+git commit -m "feat: implement UMK CRUD endpoints"
+git push origin feat/umk-crud
+```
+
+To commit multiple documentation updates at once:
 
 ```bash
 git add docs/commit-guide.md docs/backend-setup.md
-git commit -m "docs: add commit guide and backend setup documentation"
+git commit -m "docs: update commit and setup documentation"
 git push origin dev
 ```
+
+---
+
+## 6. Notes
+
+- All commits to `main` or `dev` must go through pull requests.
+- Keep commit history focused and descriptive.
+- Follow this guide before every PR submission.

@@ -1,6 +1,13 @@
+---
+aliases: [backend-setup]
+description: A guide for setting up the FinanSaku backend project locally.
+lastUpdated: 2025-10-12
+maintainer: FinanSaku Backend Team
+---
 # Backend Setup Guide
 
-This document explains how to set up the **FinanSaku Backend** project locally.
+This document provides a step-by-step guide for setting up the **FinanSaku
+backend** project in a local development environment.
 
 ---
 
@@ -8,21 +15,20 @@ This document explains how to set up the **FinanSaku Backend** project locally.
 
 | Tool | Version | Notes |
 |------|----------|-------|
-| Node.js | ≥ 18.x | LTS recommended |
-| PostgreSQL | ≥ 14.x | Use Supabase for remote DB |
-| Prisma | Latest | ORM for database access |
-| npm | ≥ 9.x | or use pnpm/yarn if preferred |
+| Node.js | ≥ 18.x | Use the LTS version for stability |
+| PostgreSQL | ≥ 14.x | Supabase is recommended for cloud hosting |
+| Prisma | Latest | ORM used for database access |
+| npm | ≥ 9.x | You may also use pnpm or yarn |
 
 ---
 
 ## 2. Installation
 
+Clone the repository and install dependencies:
+
 ```bash
-# Clone repository
 git clone https://github.com/COFFEE-CODE-COMMUNITY/finansaku-be.git
 cd finansaku-be
-
-# Install dependencies
 npm install
 ```
 
@@ -30,13 +36,13 @@ npm install
 
 ## 3. Environment Variables
 
-Copy `.env.example` to `.env`:
+Duplicate the example environment file and update it with your configuration:
 
 ```bash
 cp .env.example .env
 ```
 
-Then update the values:
+Example `.env`:
 
 ```env
 PORT=3000
@@ -44,16 +50,20 @@ DATABASE_URL="postgresql://user:password@localhost:5432/finansaku"
 JWT_SECRET="supersecretkey"
 ```
 
+> Ensure the database credentials and URL match your local or Supabase setup.
+
 ---
 
 ## 4. Prisma Setup
+
+Apply migrations and generate the Prisma client:
 
 ```bash
 npx prisma migrate dev
 npx prisma generate
 ```
 
-Verify it connects properly:
+To verify the connection and inspect your data, open Prisma Studio:
 
 ```bash
 npx prisma studio
@@ -61,15 +71,17 @@ npx prisma studio
 
 ---
 
-## 5. Run Development Server
+## 5. Running the Development Server
+
+Start the development server:
 
 ```bash
 npm run dev
 ```
 
-The app should now be running at:
+The application will be available at:
 
-```plaintext
+```bash
 http://localhost:3000
 ```
 
@@ -80,28 +92,29 @@ http://localhost:3000
 ```bash
 finansaku-be/
 ├─ prisma/
-│  └─ schema.prisma
+│  ├─ schema.prisma
+│  └─ seed.js
 ├─ src/
-│  ├─ routes/
 │  ├─ controllers/
+│  ├─ routes/
 │  ├─ services/
 │  ├─ middlewares/
 │  ├─ models/
 │  ├─ utils/
 │  └─ app.js
+├─ docs/
+│  ├─ backend-setup.md
+│  ├─ commit-guide.md
+│  └─ contribution.md
 ├─ .env.example
 ├─ package.json
-├─ README.md
-└─ docs/
-   ├─ backend-setup.md
-   ├─ commit-guide.md
-   └─ contribution.md
+└─ README.md
 ```
 
 ---
 
 ## Notes
 
-- Use feature branches (`feat/*`) for new work.
-- Keep `main` clean; merge through PRs only.
-- Always run migrations before testing changes.
+- Use feature branches (`feat/*`) for new development work.
+- Keep `main` clean; all merges should go through pull requests.
+- Always apply the latest migrations before testing or deploying changes.

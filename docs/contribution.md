@@ -1,74 +1,95 @@
+---
+aliases: [contribution]
+description: Collaboration and merge workflow guide for the FinanSaku backend team.
+lastUpdated: 2025-10-12
+maintainer: FinanSaku Backend Team
+---
 # Collaboration & Merge Workflow
 
-This document defines how Backend A and Backend B collaborate within the
-FinanSaku backend repository.
+This document describes how the **FinanSaku backend team** collaborates within
+the project repository, including branch rules, pull request conventions, and
+merge practices.
 
 ---
 
-## Branch Rules (Manual Enforcement)
+## 1. Branch Rules (Manual Enforcement)
 
-Since GitHub branch protection rules are unavailable on the free organization
-plan, follow these conventions manually to maintain consistency and safety:
+Because the GitHub Free plan does not support automatic branch protection rules,
+the team enforces the following conventions manually to ensure consistency and
+repository safety.
 
 ### Branch Restrictions
 
 | Rule | Description |
 |------|--------------|
 | **No direct commits to `main` or `dev`** | All changes must go through pull requests. |
-| **Create feature branches from `dev`** | Use the pattern `feat/<feature-name>` (e.g. `feat/auth-register`). |
-| **Never delete `main` or `dev`** | Keep these branches permanent and stable. |
-| **Always pull latest `dev`** | Before starting a new branch: `git pull origin dev`. |
-| **Merge via PR only** | No `git push` directly to `main` or `dev`. Use pull requests for review. |
-| **Keep commits clean** | Squash or rebase before merging to keep history linear. |
-| **Delete feature branches after merge** | Keeps the repo clean and avoids confusion. |
+| **Create feature branches from `dev`** | Use the format `feat/<feature-name>` (e.g., `feat/auth-register`). |
+| **Never delete `main` or `dev`** | These branches are permanent and must remain stable. |
+| **Always pull the latest `dev`** | Before creating a new branch, run `git pull origin dev`. |
+| **Merge via Pull Requests only** | Avoid pushing directly to `main` or `dev`. Use PRs for review. |
+| **Keep commits clean** | Use squash or rebase before merging to maintain a linear history. |
+| **Delete merged branches** | Remove feature branches after merge to keep the repository tidy. |
 
 ---
 
-## Pull Request Rules
+## 2. Pull Request Rules
 
 | Setting | Description |
 |----------|--------------|
-| ✅ **Require PR for all merges** | All work must be submitted through a pull request. |
-| ✅ **At least 1 reviewer required** | Backend A or B must approve before merging. |
-| ✅ **Dismiss stale approvals** | If new commits are pushed, previous approvals become invalid. |
-| ✅ **Resolve all conversations** | No merge until all comments are addressed. |
-| 🚫 **No direct pushes / force pushes** | Avoid overwriting commits on `main` or `dev`. |
-| 🧹 **Use “Squash and Merge”** | Keeps `main` and `dev` commit history linear and tidy. |
+| **Require Pull Request for all merges** | All changes must be submitted through a PR. |
+| **Minimum 1 reviewer required** | Another backend team member must approve before merging. |
+| **Dismiss stale approvals** | New commits invalidate previous approvals. |
+| **Resolve all conversations** | No PR may be merged with unresolved comments. |
+| **No direct or force pushes** | Prevents overwriting commits in `main` or `dev`. |
+| **Use “Squash and Merge”** | Keeps the commit history concise and consistent. |
 
 ---
 
-## Example Workflow
+## 3. Example Workflow
 
 ```bash
-# 1. Stay updated with dev
+# 1. Stay updated with the latest development branch
 git checkout dev
 git pull origin dev
 
-# 2. Create a feature branch
+# 2. Create a new feature branch
 git checkout -b feat/umk-crud
 
-# 3. Work, commit, and push
+# 3. Work on changes, commit, and push
 git add .
 git commit -m "feat: add UMK CRUD endpoints"
 git push -u origin feat/umk-crud
 
 # 4. Open a Pull Request
 # Target: dev branch
-# Reviewer: Backend A or Backend B
+# Reviewer: Another backend team member
 
 # 5. After approval and testing
-# Merge PR using "Squash and Merge"
-# Delete the branch after merge
+# Merge using "Squash and Merge"
+# Then delete the branch after merge
 ```
 
 ---
 
-## Merge Flow Summary
+## 4. Merge Flow Summary
 
-```plaintext
+```bash
 feat/*  →  dev  →  main
 ```
 
-- `feat/*`: for all new work
-- `dev`: integration branch for testing
-- `main`: stable production-ready branch
+| Branch   | Purpose                                    |
+| -------- | ------------------------------------------ |
+| `feat/*` | Used for developing new features or fixes  |
+| `dev`    | Integration branch for testing and staging |
+| `main`   | Stable production-ready branch             |
+
+---
+
+## 5. Notes
+
+- Use meaningful branch names (e.g., `feat/announcement-api` instead of
+  `feat/new`).
+- Keep PRs focused — one logical change per PR.
+- Always pull the latest `dev` before starting new work to prevent merge
+  conflicts.
+- Treat `main` as production-only; merge into it only after thorough testing.
