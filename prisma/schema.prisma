@@ -1,14 +1,314 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id                     String                  @id @default(uuid()) @map("id_user") @db.Uuid
+  cityId                 String                  @map("city_id") @db.Uuid
+  templateId             String                  @map("template_id") @db.Uuid
+  name                   String                  @db.VarChar(100)
+  username               String                  @unique @db.VarChar(50)
+  email                  String                  @unique @db.VarChar(100)
+  emailVerifiedAt        DateTime?               @map("email_verified_at")
+  password               String
+  rememberToken          String?                 @map("remember_token") @db.VarChar(255)
+  profileImage           String?                 @map("profile_image") @db.VarChar(255)
+  createdAt              DateTime                @default(now()) @map("created_at")
+  updatedAt              DateTime                @updatedAt @map("updated_at")
+  admin                  Admin?
+  announcementsUser      Announcement[]          @relation("AnnouncementsToUser")
+  budgetCategories       BudgetCategory[]
+  budgetSubcategories    BudgetSubcategory[]
+  calendarEvents         CalendarEvent[]
+  notificationPreference NotificationPreference?
+  notifications          Notification[]
+  saku                   Saku[]
+  city                   City                    @relation(fields: [cityId], references: [id])
+  template               AllocationTemplate      @relation(fields: [templateId], references: [id])
+  announcements          Announcement[]          @relation("AnnouncementsByAdmin")
+
+  @@index([cityId])
+  @@index([templateId])
+  @@index([rememberToken])
+  @@map("users")
+}
+
+model City {
+  id            String         @id @default(uuid()) @map("id_city") @db.Uuid
+  name          String         @map("city_name") @db.VarChar(100)
+  announcements Announcement[]
+  saku          Saku[]
+  umk           UMK[]
+  users         User[]
+
+  @@index([name])
+  @@map("cities")
+}
+
+model UMK {
+  id     String  @id @default(uuid()) @map("id_umk") @db.Uuid
+  cityId String  @map("city_id") @db.Uuid
+  year   Int
+  amount Decimal @db.Decimal(12, 2)
+  saku   Saku[]
+  city   City    @relation(fields: [cityId], references: [id])
+
+  @@unique([cityId, year])
+  @@index([cityId])
+  @@index([year])
+  @@map("umk")
+}
+
+model AllocationTemplate {
+  id          String                   @id @default(uuid()) @map("id_template") @db.Uuid
+  persona     String                   @unique @db.VarChar(50)
+  description String
+  createdAt   DateTime                 @default(now()) @map("created_at")
+  updatedAt   DateTime                 @updatedAt @map("updated_at")
+  items       AllocationTemplateItem[]
+  users       User[]
+
+  @@map("allocation_templates")
+}
+
+model AllocationTemplateItem {
+  id            String             @id @default(uuid()) @map("id_template_item") @db.Uuid
+  templateId    String             @map("template_id") @db.Uuid
+  categoryId    String             @map("category_id") @db.Uuid
+  subcategoryId String             @map("subcategory_id") @db.Uuid
+  percentage    Decimal            @db.Decimal(5, 2)
+  category      BudgetCategory     @relation(fields: [categoryId], references: [id])
+  subcategory   BudgetSubcategory  @relation(fields: [subcategoryId], references: [id])
+  template      AllocationTemplate @relation(fields: [templateId], references: [id])
+
+  @@unique([templateId, categoryId, subcategoryId])
+  @@index([templateId])
+  @@index([categoryId])
+  @@index([subcategoryId])
+  @@map("allocation_template_items")
+}
+
+model BudgetCategory {
+  id                String                   @id @default(uuid()) @map("id_category") @db.Uuid
+  userId            String?                  @map("user_id") @db.Uuid
+  name              String                   @db.VarChar(100)
+  defaultPercentage Decimal?                 @map("default_percentage") @db.Decimal(5, 2)
+  createdAt         DateTime                 @default(now()) @map("created_at")
+  updatedAt         DateTime                 @updatedAt @map("updated_at")
+  templateItems     AllocationTemplateItem[]
+  user              User?                    @relation(fields: [userId], references: [id])
+  subcategories     BudgetSubcategory[]
+  calendarEvents    CalendarEvent[]
+  allocations       SakuAllocation[]
+
+  @@unique([userId, name])
+  @@index([userId])
+  @@index([name])
+  @@map("budget_categories")
+}
+
+model BudgetSubcategory {
+  id                String                   @id @default(uuid()) @map("id_subcategory") @db.Uuid
+  categoryId        String                   @map("category_id") @db.Uuid
+  userId            String?                  @map("user_id") @db.Uuid
+  name              String                   @db.VarChar(100)
+  defaultPercentage Decimal                  @map("default_percentage") @db.Decimal(5, 2)
+  createdAt         DateTime                 @default(now()) @map("created_at")
+  updatedAt         DateTime                 @updatedAt @map("updated_at")
+  templateItems     AllocationTemplateItem[]
+  category          BudgetCategory           @relation(fields: [categoryId], references: [id])
+  user              User?                    @relation(fields: [userId], references: [id])
+  calendarEvents    CalendarEvent[]
+  allocations       SakuAllocation[]
+
+  @@unique([categoryId, userId, name])
+  @@index([categoryId])
+  @@index([userId])
+  @@index([name])
+  @@map("budget_subcategories")
+}
+
+model Saku {
+  id          String           @id @default(uuid()) @map("id_saku") @db.Uuid
+  userId      String           @map("user_id") @db.Uuid
+  cityId      String           @map("city_id") @db.Uuid
+  umkId       String?          @map("umk_id") @db.Uuid
+  year        Int
+  month       Int
+  salary      Decimal?         @db.Decimal(15, 2)
+  notes       String?
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+  city        City             @relation(fields: [cityId], references: [id])
+  umk         UMK?             @relation(fields: [umkId], references: [id])
+  user        User             @relation(fields: [userId], references: [id])
+  allocations SakuAllocation[]
+  details     SakuDetail[]
+
+  @@unique([userId, cityId, year, month])
+  @@index([userId])
+  @@index([cityId])
+  @@index([umkId])
+  @@index([year])
+  @@index([month])
+  @@map("saku")
+}
+
+model SakuAllocation {
+  id            String             @id @default(uuid()) @map("id_saku_allocation") @db.Uuid
+  sakuId        String             @map("saku_id") @db.Uuid
+  categoryId    String             @map("category_id") @db.Uuid
+  subcategoryId String?            @map("subcategory_id") @db.Uuid
+  percentage    Decimal?           @db.Decimal(5, 2)
+  fixedAmount   Decimal?           @map("fixed_amount") @db.Decimal(15, 2)
+  amount        Decimal            @db.Decimal(15, 2)
+  createdAt     DateTime           @default(now()) @map("created_at")
+  updatedAt     DateTime           @updatedAt @map("updated_at")
+  category      BudgetCategory     @relation(fields: [categoryId], references: [id])
+  saku          Saku               @relation(fields: [sakuId], references: [id])
+  subcategory   BudgetSubcategory? @relation(fields: [subcategoryId], references: [id])
+
+  @@unique([sakuId, categoryId, subcategoryId])
+  @@index([sakuId])
+  @@index([categoryId])
+  @@index([subcategoryId])
+  @@map("saku_allocations")
+}
+
+model SakuDetail {
+  id          String   @id @default(uuid()) @map("id_saku_detail") @db.Uuid
+  sakuId      String   @map("saku_id") @db.Uuid
+  key         String   @db.VarChar(100)
+  valueNumber Decimal? @map("value_number") @db.Decimal(15, 2)
+  valueText   String?  @map("value_text") @db.VarChar(255)
+  createdAt   DateTime @default(now()) @map("created_at")
+  saku        Saku     @relation(fields: [sakuId], references: [id])
+
+  @@index([sakuId])
+  @@index([key])
+  @@map("saku_details")
+}
+
+model CalendarEvent {
+  id             String             @id @default(uuid()) @map("id_event") @db.Uuid
+  userId         String             @map("user_id") @db.Uuid
+  title          String             @db.VarChar(120)
+  description    String?
+  categoryId     String?            @map("category_id") @db.Uuid
+  subcategoryId  String?            @map("subcategory_id") @db.Uuid
+  dueDate        DateTime           @map("due_date")
+  expectedAmount Decimal?           @map("expected_amount") @db.Decimal(15, 2)
+  recurrenceRule String?            @map("recurrence_rule") @db.VarChar(255)
+  remindOffset   Int?               @map("remind_offset")
+  status         String             @db.VarChar(20)
+  completedAt    DateTime?          @map("completed_at")
+  createdAt      DateTime           @default(now()) @map("created_at")
+  updatedAt      DateTime           @updatedAt @map("updated_at")
+  category       BudgetCategory?    @relation(fields: [categoryId], references: [id])
+  subcategory    BudgetSubcategory? @relation(fields: [subcategoryId], references: [id])
+  user           User               @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([categoryId])
+  @@index([subcategoryId])
+  @@index([dueDate])
+  @@index([recurrenceRule])
+  @@index([remindOffset])
+  @@map("calendar_events")
+}
+
+model Notification {
+  id             String        @id @default(uuid()) @map("id_notification") @db.Uuid
+  userId         String        @map("user_id") @db.Uuid
+  adminId        String?       @map("admin_id") @db.Uuid
+  announcementId String?       @map("announcement_id") @db.Uuid
+  title          String        @db.VarChar(140)
+  body           String
+  type           String        @db.VarChar(20)
+  notifiableType String?       @map("notifiable_type") @db.VarChar(40)
+  notifiableId   String?       @map("notifiable_id") @db.Uuid
+  readAt         DateTime?     @map("read_at")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  admin          Admin?        @relation(fields: [adminId], references: [id])
+  announcement   Announcement? @relation(fields: [announcementId], references: [id])
+  user           User          @relation(fields: [userId], references: [id])
+
+  @@index([userId, readAt])
+  @@index([type])
+  @@map("notifications")
+}
+
+model NotificationPreference {
+  id            String   @id @default(uuid()) @map("id_pref") @db.Uuid
+  userId        String   @unique @map("user_id") @db.Uuid
+  inAppReminder Boolean  @default(true) @map("in_app_reminder")
+  emailReminder Boolean  @default(false) @map("email_reminder")
+  inAppSystem   Boolean  @default(true) @map("in_app_system")
+  emailSystem   Boolean  @default(false) @map("email_system")
+  inAppSurvey   Boolean  @default(true) @map("in_app_survey")
+  emailSurvey   Boolean  @default(false) @map("email_survey")
+  inAppBudget   Boolean  @default(true) @map("in_app_budget")
+  emailBudget   Boolean  @default(false) @map("email_budget")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  user          User     @relation(fields: [userId], references: [id])
+
+  @@map("notification_preferences")
+}
+
+model Admin {
+  id            String         @id @default(uuid()) @map("id_admin") @db.Uuid
+  userId        String         @unique @map("user_id") @db.Uuid
+  role          String         @db.VarChar(30)
+  active        Boolean
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  user          User           @relation(fields: [userId], references: [id])
+  announcements Announcement[]
+  notifications Notification[]
+
+  @@map("admins")
+}
+
+model Announcement {
+  id              String         @id @default(uuid()) @map("id_announcement") @db.Uuid
+  adminId         String         @map("admin_id") @db.Uuid
+  title           String         @db.VarChar(140)
+  body            String
+  type            String         @db.VarChar(20)
+  notifiableType  String?        @map("notifiable_type") @db.VarChar(40)
+  notifiableId    String?        @map("notifiable_id") @db.Uuid
+  audienceScope   String         @map("audience_scope") @db.VarChar(30)
+  audienceUserId  String?        @map("audience_user_id") @db.Uuid
+  audiencePersona String?        @map("audience_persona")
+  audienceCityId  String?        @map("audience_city_id") @db.Uuid
+  scheduledAt     DateTime?      @map("scheduled_at")
+  status          String         @db.VarChar(12)
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+  admin           Admin          @relation(fields: [adminId], references: [id])
+  city            City?          @relation(fields: [audienceCityId], references: [id])
+  user            User?          @relation("AnnouncementsToUser", fields: [audienceUserId], references: [id])
+  notifications   Notification[]
+  users           User[]         @relation("AnnouncementsByAdmin")
+
+  @@index([status, scheduledAt])
+  @@map("announcements")
+}
+
+model Article {
+  id          Int      @id @default(autoincrement()) @map("id_article")
+  title       String   @unique @db.VarChar(255)
+  description String
+  body        String
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("article")
 }
