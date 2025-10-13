@@ -1,24 +1,53 @@
 {
   "name": "finansaku-be",
   "version": "1.0.0",
-  "main": "index.js",
+  "type": "module",
+  "description": "FinanSaku backend — Express + Prisma + PostgreSQL API with authentication, rate limiting, and testing setup.",
+  "main": "src/app.js",
   "scripts": {
     "start": "node src/app.js",
-    "dev": "nodemon src/app.js"
+    "dev": "nodemon src/app.js",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "prisma:generate": "prisma generate",
+    "prisma:push": "prisma db push",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:studio": "prisma studio",
+    "seed": "node prisma/seed.js",
+    "test": "cross-env NODE_ENV=test NODE_OPTIONS=--experimental-vm-modules jest"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "finansaku",
+    "express",
+    "prisma",
+    "postgresql",
+    "backend",
+    "api",
+    "auth"
+  ],
+  "author": "FinanSaku Backend Team",
   "license": "ISC",
-  "description": "",
   "dependencies": {
     "@prisma/client": "^6.17.1",
+    "bcrypt": "^6.0.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
+    "express-rate-limit": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
     "prisma": "^6.17.1"
   },
   "devDependencies": {
+    "@eslint/js": "^9.37.0",
+    "@eslint/json": "^0.13.2",
+    "@eslint/markdown": "^7.4.0",
     "@types/node": "^24.7.2",
     "cross-env": "^10.1.0",
-    "nodemon": "^3.1.10"
+    "eslint": "^9.37.0",
+    "globals": "^16.4.0",
+    "jest": "^30.2.0",
+    "nodemon": "^3.1.10",
+    "supertest": "^7.1.4"
   }
 }
