@@ -1,5 +1,5 @@
 import * as authService from '../services/auth.service.js'
-import { verifyToken, signToken } from '../utils/jwt.js'
+import { verifyToken, signTokens } from '../utils/jwt.js'
 import { defaultCookieOptions, cookieDurations } from '../config/cookieOptions.js'
 
 // === POST /auth/register ===
@@ -101,8 +101,8 @@ export const refresh = async (req, res) => {
     }
 
     // Token rotation
-    const newAccessToken = signToken({ userId: decoded.userId })
-    const newRefreshToken = signToken({ userId: decoded.userId })
+    const newAccessToken = signTokens({ userId: decoded.userId })
+    const newRefreshToken = signTokens({ userId: decoded.userId })
 
     res.cookie('access_token', newAccessToken, {
       ...defaultCookieOptions,

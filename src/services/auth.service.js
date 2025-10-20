@@ -1,6 +1,6 @@
 import bcrypt from 'bcrypt'
 import { PrismaClient } from '@prisma/client'
-import { signToken } from '../utils/jwt.js'
+import { signTokens } from '../utils/jwt.js'
 
 const prisma = new PrismaClient()
 
@@ -27,8 +27,8 @@ export async function registerUser({ name, username, email, password, cityId, te
   })
 
   // Generate tokens for the newly registered user
-  const accessToken = signToken({ userId: user.id })
-  const refreshToken = signToken({ userId: user.id })
+  const accessToken = signTokens({ userId: user.id })
+  const refreshToken = signTokens({ userId: user.id })
 
   // Store the refresh token in the database
   await prisma.refreshToken.create({
@@ -53,8 +53,8 @@ export async function loginUser({ email, password }) {
   if (!valid) throw new Error('Invalid email or password')
 
   // Generate new tokens
-  const accessToken = signToken({ userId: user.id })
-  const refreshToken = signToken({ userId: user.id })
+  const accessToken = signTokens({ userId: user.id })
+  const refreshToken = signTokens({ userId: user.id })
 
   // Store the refresh token for session tracking
   await prisma.refreshToken.create({
