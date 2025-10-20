@@ -12,13 +12,15 @@ datasource db {
 // === Core User & Authentication ===
 model User {
   id                     String                  @id @default(uuid()) @map("id_user") @db.Uuid
-  cityId                 String                  @map("city_id") @db.Uuid
-  templateId             String                  @map("template_id") @db.Uuid
+  cityId                 String?                 @map("city_id") @db.Uuid
+  templateId             String?                 @map("template_id") @db.Uuid
   name                   String                  @db.VarChar(100)
   username               String                  @unique @db.VarChar(50)
   email                  String                  @unique @db.VarChar(100)
+  provider               String?                 @default("local") @db.VarChar(50)
+  providerId             String?                 @unique @db.VarChar(255)
   emailVerifiedAt        DateTime?               @map("email_verified_at")
-  password               String
+  password               String?
   rememberToken          String?                 @map("remember_token") @db.VarChar(255)
   profileImage           String?                 @map("profile_image") @db.VarChar(255)
   createdAt              DateTime                @default(now()) @map("created_at")
@@ -26,8 +28,8 @@ model User {
 
   // Relations
   admin                  Admin?
-  city                   City                    @relation(fields: [cityId], references: [id])
-  template               AllocationTemplate      @relation(fields: [templateId], references: [id])
+  city                   City?                   @relation(fields: [cityId], references: [id])
+  template               AllocationTemplate?     @relation(fields: [templateId], references: [id])
   notificationPreference NotificationPreference?
   RefreshToken           RefreshToken[]
 
