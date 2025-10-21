@@ -18,11 +18,11 @@ model User {
   username               String                  @unique @db.VarChar(50)
   email                  String                  @unique @db.VarChar(100)
   provider               String?                 @default("local") @db.VarChar(50)
-  providerId             String?                 @unique @db.VarChar(255)
+  providerId             String?                 @map("provider_id") @unique
   emailVerifiedAt        DateTime?               @map("email_verified_at")
   password               String?
   rememberToken          String?                 @map("remember_token") @db.VarChar(255)
-  profileImage           String?                 @map("profile_image") @db.VarChar(255)
+  profileImage           String?                 @map("profile_image")
   createdAt              DateTime                @default(now()) @map("created_at")
   updatedAt              DateTime                @updatedAt @map("updated_at")
 
@@ -347,6 +347,7 @@ model RefreshToken {
   id        String   @id @default(uuid()) @map("id_refresh_token")
   userId    String   @map("user_id") @db.Uuid
   token     String   @unique
+  revoked   Boolean  @default(false) @map("is_revoked")
   expiresAt DateTime @map("expires_at")
   createdAt DateTime @default(now()) @map("created_at")
 
