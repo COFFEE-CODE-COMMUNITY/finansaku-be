@@ -1,21 +1,41 @@
-// === Imports ===
 import express from 'express'
 import dotenv from 'dotenv'
 import cors from 'cors'
 import cookieParser from 'cookie-parser'
-import { authRateLimiter } from './middlewares/rateLimiter.js'
-import authRoutes from './routes/auth.routes.js'
+import * as Sentry from '@sentry/node'
 
-// === Environment Variables ===
+import { errorHandler } from './middlewares/errorHandler.js'
+import { authRateLimiter } from './middlewares/rateLimiter.js'
+import { requestLogger } from './middlewares/requestLogger.js'
+import authRoutes from './routes/auth.routes.js'
+import logger from './config/logger.js'
+
+// === Load Environment Variables ===
 dotenv.config()
 
-// === Express App ===
+// === Initialize Express App ===
 const app = express()
+
+// === Initialize Sentry (only if DSN exists) ===
+if (process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    tracesSampleRate: 1.0,
+    environment: process.env.NODE_ENV,
+  })
+  logger.info('🪶 Sentry monitoring initialized')
+  app.use(Sentry.Handlers.requestHandler())
+}
+
+// === Core Middlewares ===
 app.use(express.json({ limit: '1mb' }))
 app.use(cookieParser())
 
+// === Request Logger ===
+app.use(requestLogger)
+logger.info('✅ FinanSaku backend starting...')
+
 // === CORS Configuration ===
-// Enables frontend to send cookies with cross-origin requests
 app.use(
   cors({
     origin: process.env.CLIENT_URL || 'http://localhost:5173',
@@ -24,27 +44,32 @@ app.use(
 )
 
 // === Rate Limiter ===
-// Only applied to login endpoint to prevent brute-force attacks
 app.use('/api/v1/auth/login', authRateLimiter)
 
-// === Root Health Check ===
-app.get('/', (req, res) => {
+// === Health Check Routes ===
+app.get('/', (_req, res) => {
   res.json({ message: 'FinanSaku API is running' })
 })
 
-// === Health Check Endpoint ===
-app.get('/api/health', (req, res) => {
+app.get('/api/v1/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
 })
 
-// === Routes ===
+// === API Routes ===
 app.use('/api/v1/auth', authRoutes)
 
-// === Server ===
+// === Error Handling (Sentry + Global Logger) ===
+if (process.env.SENTRY_DSN) {
+  app.use(Sentry.Handlers.errorHandler())
+}
+
+app.use(errorHandler)
+
+// === Server Startup ===
 if (process.env.NODE_ENV !== 'test') {
   const PORT = process.env.PORT || 8081
   app.listen(PORT, () => {
-    console.log(`✅ FinanSaku backend running on port ${PORT}`)
+    logger.info(`✅ FinanSaku backend running on port ${PORT}`)
   })
 }
 
