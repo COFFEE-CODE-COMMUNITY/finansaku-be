@@ -1,13 +1,13 @@
 ---
 aliases: [backend-setup]
 description: A guide for setting up the FinanSaku backend project locally.
-lastUpdated: 2025-10-12
+lastUpdated: 2025-10-21
 maintainer: FinanSaku Backend Team
 ---
+
 # Backend Setup Guide
 
-This document provides a step-by-step guide for setting up the **FinanSaku
-backend** project in a local development environment.
+This document provides a step-by-step guide for setting up the **FinanSaku backend** project in a local development environment.
 
 ---
 
@@ -30,7 +30,7 @@ Clone the repository and install dependencies:
 git clone https://github.com/COFFEE-CODE-COMMUNITY/finansaku-be.git
 cd finansaku-be
 npm install
-```
+````
 
 ---
 
@@ -45,12 +45,36 @@ cp .env.example .env
 Example `.env`:
 
 ```env
+# === Server Config ===
 PORT=3000
+
+# === App Environment ===
+NODE_ENV=development
+
+# === Database Config ===
 DATABASE_URL="postgresql://user:password@localhost:5432/finansaku"
-JWT_SECRET="supersecretkey"
+DIRECT_URL="postgresql://user:password@localhost:5432/finansaku"
+
+# === JWT / Tokens ===
+ACCESS_TOKEN_SECRET="local-access-secret"
+REFRESH_TOKEN_SECRET="local-refresh-secret"
+ACCESS_TOKEN_EXPIRES=1h
+REFRESH_TOKEN_EXPIRES=7d
+
+# === Optional Services ===
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=
+
+# === Google OAuth2 ===
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GOOGLE_REDIRECT_URI=http://localhost:3000/api/v1/auth/google/callback
+CLIENT_WEB_REDIRECT=http://localhost:5173/oauth-success
 ```
 
-> Ensure the database credentials and URL match your local or Supabase setup.
+> Ensure your database credentials match your local or Supabase setup.
+> OAuth2 variables must match the redirect URIs configured in your Google Cloud Console.
 
 ---
 
@@ -99,11 +123,12 @@ finansaku-be/
 │  ├─ routes/
 │  ├─ services/
 │  ├─ middlewares/
-│  ├─ models/
+│  ├─ dto/
 │  ├─ utils/
 │  └─ app.js
 ├─ docs/
 │  ├─ backend-setup.md
+│  ├─ auth.md
 │  ├─ commit-guide.md
 │  └─ contribution.md
 ├─ .env.example
@@ -118,3 +143,4 @@ finansaku-be/
 - Use feature branches (`feat/*`) for new development work.
 - Keep `main` clean; all merges should go through pull requests.
 - Always apply the latest migrations before testing or deploying changes.
+- Google OAuth2 setup requires valid redirect URIs and test users on Google Cloud.

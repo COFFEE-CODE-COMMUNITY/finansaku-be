@@ -11,20 +11,6 @@ ALTER TABLE "umk"
 ADD CONSTRAINT check_umk_amount_nonnegative
 CHECK (amount >= 0);
 
--- === Allocation Templates ===
-
-ALTER TABLE "allocation_templates"
-DROP CONSTRAINT IF EXISTS check_allocation_templates_persona_valid;
-ALTER TABLE "allocation_templates"
-ADD CONSTRAINT check_allocation_templates_persona_valid
-CHECK (persona IN (
-  'mahasiswa',
-  'pekerja_rantau',
-  'first_jobber',
-  'keluarga_muda',
-  'freelancer'
-)); -- TODO: Tentative validations. Do more research.
-
 -- === Budget Categories ===
 
 ALTER TABLE "budget_categories"

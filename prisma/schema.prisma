@@ -1,3 +1,4 @@
+// === Prisma Setup ===
 generator client {
   provider = "prisma-client-js"
 }
@@ -8,30 +9,38 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+// === Core User & Authentication ===
 model User {
   id                     String                  @id @default(uuid()) @map("id_user") @db.Uuid
-  cityId                 String                  @map("city_id") @db.Uuid
-  templateId             String                  @map("template_id") @db.Uuid
+  cityId                 String?                 @map("city_id") @db.Uuid
+  templateId             String?                 @map("template_id") @db.Uuid
   name                   String                  @db.VarChar(100)
   username               String                  @unique @db.VarChar(50)
   email                  String                  @unique @db.VarChar(100)
+  provider               String?                 @default("local") @db.VarChar(50)
+  providerId             String?                 @map("provider_id") @unique
   emailVerifiedAt        DateTime?               @map("email_verified_at")
-  password               String
+  password               String?
   rememberToken          String?                 @map("remember_token") @db.VarChar(255)
-  profileImage           String?                 @map("profile_image") @db.VarChar(255)
+  profileImage           String?                 @map("profile_image")
   createdAt              DateTime                @default(now()) @map("created_at")
   updatedAt              DateTime                @updatedAt @map("updated_at")
+
+  // Relations
   admin                  Admin?
+  city                   City?                   @relation(fields: [cityId], references: [id])
+  template               AllocationTemplate?     @relation(fields: [templateId], references: [id])
+  notificationPreference NotificationPreference?
+  RefreshToken           RefreshToken[]
+
+  // Collections
   announcementsUser      Announcement[]          @relation("AnnouncementsToUser")
+  announcements          Announcement[]          @relation("AnnouncementsByAdmin")
+  notifications          Notification[]
   budgetCategories       BudgetCategory[]
   budgetSubcategories    BudgetSubcategory[]
   calendarEvents         CalendarEvent[]
-  notificationPreference NotificationPreference?
-  notifications          Notification[]
   saku                   Saku[]
-  city                   City                    @relation(fields: [cityId], references: [id])
-  template               AllocationTemplate      @relation(fields: [templateId], references: [id])
-  announcements          Announcement[]          @relation("AnnouncementsByAdmin")
 
   @@index([cityId])
   @@index([templateId])
@@ -39,6 +48,7 @@ model User {
   @@map("users")
 }
 
+// === City & UMK ===
 model City {
   id            String         @id @default(uuid()) @map("id_city") @db.Uuid
   name          String         @map("city_name") @db.VarChar(100)
@@ -56,8 +66,9 @@ model UMK {
   cityId String  @map("city_id") @db.Uuid
   year   Int
   amount Decimal @db.Decimal(12, 2)
-  saku   Saku[]
+
   city   City    @relation(fields: [cityId], references: [id])
+  saku   Saku[]
 
   @@unique([cityId, year])
   @@index([cityId])
@@ -65,12 +76,14 @@ model UMK {
   @@map("umk")
 }
 
+// === Allocation Templates ===
 model AllocationTemplate {
   id          String                   @id @default(uuid()) @map("id_template") @db.Uuid
   persona     String                   @unique @db.VarChar(50)
   description String
   createdAt   DateTime                 @default(now()) @map("created_at")
   updatedAt   DateTime                 @updatedAt @map("updated_at")
+
   items       AllocationTemplateItem[]
   users       User[]
 
@@ -83,6 +96,7 @@ model AllocationTemplateItem {
   categoryId    String             @map("category_id") @db.Uuid
   subcategoryId String             @map("subcategory_id") @db.Uuid
   percentage    Decimal            @db.Decimal(5, 2)
+
   category      BudgetCategory     @relation(fields: [categoryId], references: [id])
   subcategory   BudgetSubcategory  @relation(fields: [subcategoryId], references: [id])
   template      AllocationTemplate @relation(fields: [templateId], references: [id])
@@ -94,6 +108,7 @@ model AllocationTemplateItem {
   @@map("allocation_template_items")
 }
 
+// === Budget Categories ===
 model BudgetCategory {
   id                String                   @id @default(uuid()) @map("id_category") @db.Uuid
   userId            String?                  @map("user_id") @db.Uuid
@@ -101,9 +116,11 @@ model BudgetCategory {
   defaultPercentage Decimal?                 @map("default_percentage") @db.Decimal(5, 2)
   createdAt         DateTime                 @default(now()) @map("created_at")
   updatedAt         DateTime                 @updatedAt @map("updated_at")
-  templateItems     AllocationTemplateItem[]
+
+  // Relations
   user              User?                    @relation(fields: [userId], references: [id])
   subcategories     BudgetSubcategory[]
+  templateItems     AllocationTemplateItem[]
   calendarEvents    CalendarEvent[]
   allocations       SakuAllocation[]
 
@@ -121,9 +138,11 @@ model BudgetSubcategory {
   defaultPercentage Decimal                  @map("default_percentage") @db.Decimal(5, 2)
   createdAt         DateTime                 @default(now()) @map("created_at")
   updatedAt         DateTime                 @updatedAt @map("updated_at")
-  templateItems     AllocationTemplateItem[]
+
+  // Relations
   category          BudgetCategory           @relation(fields: [categoryId], references: [id])
   user              User?                    @relation(fields: [userId], references: [id])
+  templateItems     AllocationTemplateItem[]
   calendarEvents    CalendarEvent[]
   allocations       SakuAllocation[]
 
@@ -134,6 +153,7 @@ model BudgetSubcategory {
   @@map("budget_subcategories")
 }
 
+// === Saku (Main Finance Model) ===
 model Saku {
   id          String           @id @default(uuid()) @map("id_saku") @db.Uuid
   userId      String           @map("user_id") @db.Uuid
@@ -145,6 +165,7 @@ model Saku {
   notes       String?
   createdAt   DateTime         @default(now()) @map("created_at")
   updatedAt   DateTime         @updatedAt @map("updated_at")
+
   city        City             @relation(fields: [cityId], references: [id])
   umk         UMK?             @relation(fields: [umkId], references: [id])
   user        User             @relation(fields: [userId], references: [id])
@@ -170,6 +191,7 @@ model SakuAllocation {
   amount        Decimal            @db.Decimal(15, 2)
   createdAt     DateTime           @default(now()) @map("created_at")
   updatedAt     DateTime           @updatedAt @map("updated_at")
+
   category      BudgetCategory     @relation(fields: [categoryId], references: [id])
   saku          Saku               @relation(fields: [sakuId], references: [id])
   subcategory   BudgetSubcategory? @relation(fields: [subcategoryId], references: [id])
@@ -188,6 +210,7 @@ model SakuDetail {
   valueNumber Decimal? @map("value_number") @db.Decimal(15, 2)
   valueText   String?  @map("value_text") @db.VarChar(255)
   createdAt   DateTime @default(now()) @map("created_at")
+
   saku        Saku     @relation(fields: [sakuId], references: [id])
 
   @@index([sakuId])
@@ -195,6 +218,7 @@ model SakuDetail {
   @@map("saku_details")
 }
 
+// === Calendar & Notification System ===
 model CalendarEvent {
   id             String             @id @default(uuid()) @map("id_event") @db.Uuid
   userId         String             @map("user_id") @db.Uuid
@@ -210,6 +234,7 @@ model CalendarEvent {
   completedAt    DateTime?          @map("completed_at")
   createdAt      DateTime           @default(now()) @map("created_at")
   updatedAt      DateTime           @updatedAt @map("updated_at")
+
   category       BudgetCategory?    @relation(fields: [categoryId], references: [id])
   subcategory    BudgetSubcategory? @relation(fields: [subcategoryId], references: [id])
   user           User               @relation(fields: [userId], references: [id])
@@ -235,6 +260,7 @@ model Notification {
   notifiableId   String?       @map("notifiable_id") @db.Uuid
   readAt         DateTime?     @map("read_at")
   createdAt      DateTime      @default(now()) @map("created_at")
+
   admin          Admin?        @relation(fields: [adminId], references: [id])
   announcement   Announcement? @relation(fields: [announcementId], references: [id])
   user           User          @relation(fields: [userId], references: [id])
@@ -257,11 +283,12 @@ model NotificationPreference {
   emailBudget   Boolean  @default(false) @map("email_budget")
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
-  user          User     @relation(fields: [userId], references: [id])
 
+  user          User     @relation(fields: [userId], references: [id])
   @@map("notification_preferences")
 }
 
+// === Admin & Announcement ===
 model Admin {
   id            String         @id @default(uuid()) @map("id_admin") @db.Uuid
   userId        String         @unique @map("user_id") @db.Uuid
@@ -269,6 +296,7 @@ model Admin {
   active        Boolean
   createdAt     DateTime       @default(now()) @map("created_at")
   updatedAt     DateTime       @updatedAt @map("updated_at")
+
   user          User           @relation(fields: [userId], references: [id])
   announcements Announcement[]
   notifications Notification[]
@@ -292,6 +320,7 @@ model Announcement {
   status          String         @db.VarChar(12)
   createdAt       DateTime       @default(now()) @map("created_at")
   updatedAt       DateTime       @updatedAt @map("updated_at")
+
   admin           Admin          @relation(fields: [adminId], references: [id])
   city            City?          @relation(fields: [audienceCityId], references: [id])
   user            User?          @relation("AnnouncementsToUser", fields: [audienceUserId], references: [id])
@@ -302,6 +331,7 @@ model Announcement {
   @@map("announcements")
 }
 
+// === Articles & Refresh Tokens ===
 model Article {
   id          Int      @id @default(autoincrement()) @map("id_article")
   title       String   @unique @db.VarChar(255)
@@ -311,4 +341,19 @@ model Article {
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   @@map("article")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid()) @map("id_refresh_token")
+  userId    String   @map("user_id") @db.Uuid
+  token     String   @unique
+  revoked   Boolean  @default(false) @map("is_revoked")
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
 }
