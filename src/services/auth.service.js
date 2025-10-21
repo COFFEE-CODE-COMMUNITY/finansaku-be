@@ -67,3 +67,12 @@ export async function loginUser({ email, password }) {
 
   return { user, accessToken, refreshToken }
 }
+
+// === Revoke All Refresh Tokens for a User ===
+export async function revokeTokens(userId) {
+  await prisma.refreshToken.updateMany({
+    where: { userId },
+    data: { revoked: true },
+  })
+  return true
+}

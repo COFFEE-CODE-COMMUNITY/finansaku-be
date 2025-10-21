@@ -1,15 +1,20 @@
 import * as authService from '../services/auth.service.js'
 import { verifyToken, signTokens } from '../utils/jwt.js'
 import { defaultCookieOptions, cookieDurations } from '../config/cookieOptions.js'
+import { createLogger } from '../utils/scopedLogger.js'
+
+const log = createLogger('AUTH')
 
 // === POST /auth/register ===
 // Registers a new user and returns token cookie
-export const register = async (req, res) => {
+export const register = async (req, res, next) => {
   try {
     const { name, username, email, password, cityId, templateId } = req.body
 
     if (!cityId || !templateId) {
-      return res.status(400).json({ error: 'cityId and templateId are required' })
+      const error = new Error('cityId and templateId are required')
+      error.statusCode = 400
+      throw error
     }
 
     const result = await authService.registerUser({
@@ -22,17 +27,18 @@ export const register = async (req, res) => {
     })
 
     res.status(201).json({
+      success: true,
       message: 'User registered successfully',
       data: result,
     })
   } catch (err) {
-    res.status(400).json({ error: err.message })
+    next(err)
   }
 }
 
 // === POST /auth/login ===
 // Authenticates user and issues both access & refresh token cookies
-export const login = async (req, res) => {
+export const login = async (req, res, next) => {
   try {
     const { email, password } = req.body
     const { user, accessToken, refreshToken } = await authService.loginUser({ email, password })
@@ -48,11 +54,13 @@ export const login = async (req, res) => {
     })
 
     res.status(200).json({
+      success: true,
       message: 'Login successful',
       data: { user },
     })
   } catch (err) {
-    res.status(401).json({ error: err.message })
+    err.statusCode = 401
+    next(err)
   }
 }
 
@@ -60,6 +68,7 @@ export const login = async (req, res) => {
 // Returns authenticated user info
 export const me = async (req, res) => {
   res.status(200).json({
+    success: true,
     message: 'Authenticated user fetched successfully',
     data: {
       id: req.user.id,
@@ -83,21 +92,25 @@ export const logout = (_req, res) => {
   res.clearCookie('access_token', options)
   res.clearCookie('refresh_token', options)
 
-  res.status(200).json({ message: 'Logged out successfully' })
+  res.status(200).json({ success: true, message: 'Logged out successfully' })
 }
 
 // === POST /auth/refresh ===
 // Refreshes the access token using the refresh token
-export const refresh = async (req, res) => {
-  const refreshToken = req.cookies.refresh_token
-  if (!refreshToken) {
-    return res.status(401).json({ error: 'Missing refresh token' })
-  }
-
+export const refresh = async (req, res, next) => {
   try {
+    const refreshToken = req.cookies.refresh_token
+    if (!refreshToken) {
+      const error = new Error('Missing refresh token')
+      error.statusCode = 401
+      throw error
+    }
+
     const decoded = verifyToken(refreshToken)
     if (!decoded || typeof decoded !== 'object' || typeof decoded.userId !== 'string') {
-      return res.status(401).json({ error: 'Invalid refresh token' })
+      const error = new Error('Invalid refresh token')
+      error.statusCode = 401
+      throw error
     }
 
     // Token rotation
@@ -114,8 +127,30 @@ export const refresh = async (req, res) => {
       maxAge: cookieDurations.refresh,
     })
 
-    res.status(200).json({ message: 'Token refreshed successfully' })
+    res.status(200).json({ success: true, message: 'Token refreshed successfully' })
   } catch (err) {
-    res.status(401).json({ error: 'Invalid or expired refresh token' })
+    log.error('REFRESH ERROR', err)
+    err.statusCode = err.statusCode || 401
+    next(err)
+  }
+}
+
+// === POST /auth/revoke ===
+// Revokes all refresh tokens for the current user
+export const revoke = async (req, res, next) => {
+  try {
+    await authService.revokeTokens(req.user.id)
+
+    res.clearCookie('access_token', { ...defaultCookieOptions, maxAge: 0 })
+    res.clearCookie('refresh_token', { ...defaultCookieOptions, maxAge: 0 })
+
+    res.status(200).json({
+      success: true,
+      message: 'All sessions revoked successfully',
+    })
+  } catch (err) {
+    log.error('[AUTH REVOKE ERROR]', err)
+    err.statusCode = 500
+    next(err)
   }
 }
