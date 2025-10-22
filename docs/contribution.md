@@ -1,18 +1,75 @@
 ---
 aliases: [contribution]
-description: Collaboration and merge workflow guide for the FinanSaku backend team.
-lastUpdated: 2025-10-12
+description: Collaboration, merge workflow, and team roles guide for the FinanSaku backend team.
+lastUpdated: 2025-10-22
 maintainer: FinanSaku Backend Team
 ---
+
 # Collaboration & Merge Workflow
 
 This document describes how the **FinanSaku backend team** collaborates within
-the project repository, including branch rules, pull request conventions, and
-merge practices.
+the project repository — including branch conventions, pull request practices,
+and each member’s role and responsibilities.
 
 ---
 
-## 1. Branch Rules (Manual Enforcement)
+## 1. Roles & Responsibilities
+
+| **Week** | **Backend A (Core & Infrastructure)**                                                                                                     | **Backend B (API & Integration)**                                                           |
+| -------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| **4**    | Setup repository, environment, database, and Prisma migrations                                                                            | Setup Postman workspace and dummy API endpoints for initial integration                     |
+| **5**    | Implement authentication system (JWT + Google OAuth2), email verification, and password recovery flows                                    | Build core CRUD endpoints (User, UMK, Saku, Article) and validation schemas                 |
+| **6**    | Finalize deployment (VM, Nginx, PM2), user settings (email/password update), aggregator service, and automated testing (Jest + Supertest) | Implement notifications, export-to-CSV, dashboard endpoints, and finalize API documentation |
+
+---
+
+### 1.1. **Backend A – Core & Infrastructure Lead**
+
+**Focus:** System setup, authentication, database, and deployment.
+**Main Responsibility:** Ensure the backend _runs properly_ — including database reliability, API security, and deployment infrastructure.
+
+**Tasks:**
+
+- Initialize backend project structure (**Node.js + Express + Prisma**)
+- Setup Supabase database and `.env` configuration
+- Define Prisma schema, manage migrations, and seeding
+- Implement **authentication** (register/login + JWT, refresh tokens)
+- Integrate **Google OAuth2 login**
+- Implement **email verification** and **password recovery**
+- Implement **email/password update** (user settings)
+- Handle **UMK and budget allocation logic**
+- Manage **Aggregator Service** for UMK & cost-of-living data
+- Add **rate limiting & security middlewares**
+- Setup **PM2, Nginx, SSL**, and optional **Redis cache**
+- Integrate optional **Sentry monitoring**
+- Maintain backend documentation and deployment workflows
+
+---
+
+### 1.2. **Backend B – API & Integration Lead**
+
+**Focus:** Functional endpoints, validation, and frontend integration.
+**Main Responsibility:** Ensure the frontend _can interact smoothly_ with the backend.
+
+**Tasks:**
+
+- Create API routes for **User**, **UMK**, and **Saku/Allocation**
+- Build **Article** endpoints (list, detail, CRUD for admin)
+- Implement **Notifications** (CRUD + delivery triggers)
+- Implement **data export** (CSV/PDF/Excel)
+- Implement **dashboard analytics endpoints**
+- Build **Admin** and **Announcement** modules
+- Handle **input validation** (Joi/Zod or DTOs)
+- Manage **error handling** and response standardization
+- Create **integration tests** (Postman, Jest, Supertest)
+- Prepare **API documentation** (Swagger or Markdown)
+- Maintain **frontend integration support**
+- Collaborate on **budget logic and performance**
+- Update documentation for any new or modified endpoints
+
+---
+
+## 2. Branch Rules (Manual Enforcement)
 
 Because the GitHub Free plan does not support automatic branch protection rules,
 the team enforces the following conventions manually to ensure consistency and
@@ -32,7 +89,7 @@ repository safety.
 
 ---
 
-## 2. Pull Request Rules
+## 3. Pull Request Rules
 
 | Setting | Description |
 |----------|--------------|
@@ -45,7 +102,7 @@ repository safety.
 
 ---
 
-## 3. Example Workflow
+## 4. Example Workflow
 
 ```bash
 # 1. Stay updated with the latest development branch
@@ -71,7 +128,7 @@ git push -u origin feat/umk-crud
 
 ---
 
-## 4. Merge Flow Summary
+## 5. Merge Flow Summary
 
 ```bash
 feat/*  →  dev  →  main
@@ -85,7 +142,7 @@ feat/*  →  dev  →  main
 
 ---
 
-## 5. Notes
+## 6. Notes
 
 - Use meaningful branch names (e.g., `feat/announcement-api` instead of
   `feat/new`).
@@ -93,3 +150,4 @@ feat/*  →  dev  →  main
 - Always pull the latest `dev` before starting new work to prevent merge
   conflicts.
 - Treat `main` as production-only; merge into it only after thorough testing.
+- Always update documentation if your feature adds or modifies core logic.
