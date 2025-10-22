@@ -14,7 +14,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "seed": "node prisma/seed.js",
-    "test": "cross-env NODE_ENV=test NODE_OPTIONS=--experimental-vm-modules jest"
+    "test": "NODE_ENV=test node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand"
   },
   "keywords": [
     "finansaku",
@@ -38,6 +38,7 @@
     "express-rate-limit": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
     "prisma": "^6.17.1",
+    "redis": "^5.8.3",
     "winston": "^3.18.3"
   },
   "devDependencies": {
