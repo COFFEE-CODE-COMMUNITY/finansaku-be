@@ -1,6 +1,6 @@
 # FinanSaku Backend
 
-> This is Work in Progress!
+> Status: Active Development (v0.1.0)
 
 Backend service for **FinanSaku**, a budgeting and UMK-based financial tracker
 app by **Coffee Code Community**.
@@ -11,7 +11,9 @@ app by **Coffee Code Community**.
 
 FinanSaku backend provides:
 
-- User authentication and authorization
+- User authentication and authorization (JWT + Google OAuth2)
+- Email verification and password recovery
+- Account management (change email & password)
 - UMK and salary data management
 - Automated budget allocation logic
 - Article and announcement management
@@ -24,7 +26,9 @@ FinanSaku backend provides:
 - **Node.js** with **Express**
 - **Prisma ORM**
 - **PostgreSQL** (Supabase)
+- **Redis** for token and verification caching
 - **JWT Authentication**
+- **Nodemailer** for email templates
 - **PM2 + Nginx** for deployment (`api.finansaku.space`)
 
 ---
@@ -81,6 +85,8 @@ To view your database in Prisma Studio:
 npx prisma studio
 ```
 
+Supabase PostgreSQL is used for remote production deployment.
+
 ---
 
 ## Branch & Commit Conventions
@@ -120,18 +126,24 @@ npx prisma studio
 
 Refer to the [`/docs`](./docs) directory for full details:
 
-| File                                                | Description                               |
-| --------------------------------------------------- | ----------------------------------------- |
-| [`backend-setup.md`](./docs/backend-setup.md)       | Local setup and environment configuration |
-| [`commit-guide.md`](./docs/commit-guide.md)         | Commit message rules                      |
-| [`contribution.md`](./docs/contribution.md)         | Collaboration and merge workflow          |
-| [`project-overview.md`](./docs/project-overview.md) | General overview and structure            |
-| [`db_erd.png`](./docs/db_erd.png)                   | Database ERD diagram                      |
+| File                                                    | Description                               |
+| ------------------------------------------------------- | ----------------------------------------- |
+| [`backend-setup.md`](./docs/backend-setup.md)           | Local setup and environment configuration |
+| [`auth.md`](./docs/auth.md)                             | Authentication, JWT, and OAuth2 guide     |
+| [`db-workflow.md`](./docs/db-workflow.md)               | Prisma migration and Supabase workflow    |
+| [`db-schema.md`](./docs/db-schema.md)                   | Database structure and relationships      |
+| [`db-testing.md`](./docs/db-testing.md)                 | Database verification and CRUD testing    |
+| [`google-login-setup.md`](./docs/google-login-setup.md) | Google OAuth2 configuration guide         |
+| [`commit-guide.md`](./docs/commit-guide.md)             | Conventional commit message rules         |
+| [`contribution.md`](./docs/contribution.md)             | Collaboration and merge workflow          |
+| [`project-overview.md`](./docs/project-overview.md)     | General overview and architecture         |
+| [`CHANGELOG.md`](./CHANGELOG.md)                        | Version history and release notes         |
+| [`db_erd.png`](./docs/db_erd.png)                       | Database ERD diagram                      |
 
 ---
 
 ## License
 
 This project is maintained under the **Coffee Code Community** capstone program.
-For questions or collaboration inquiries, please contact the backend
-maintainers.
+© 2025 Coffee Code Community — FinanSaku Backend Team
+For inquiries or collaboration, please contact the backend maintainers.
