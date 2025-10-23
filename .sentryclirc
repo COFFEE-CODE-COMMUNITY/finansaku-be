@@ -1,0 +1,8 @@
+
+[auth]
+token=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
+
+[defaults]
+org=doaesque
+project=finansaku-be
+release=1.0.0

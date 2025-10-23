@@ -1,0 +1,25 @@
+name: Release Check
+
+on:
+  push:
+    branches:
+      - dev
+      - main
+
+jobs:
+  changelog-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Ensure CHANGELOG exists
+        run: |
+          if [ ! -f CHANGELOG.md ]; then
+            echo "❌ CHANGELOG.md not found."
+            exit 1
+          fi
+          echo "✅ CHANGELOG.md found."
+
+      - name: Print current version
+        run: grep '^## ' CHANGELOG.md | head -n 1 || echo "Version not set"
