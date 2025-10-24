@@ -57,6 +57,9 @@ model City {
   umk           UMK[]
   users         User[]
 
+  AggregatorLog AggregatorLog[]
+  LivingCost LivingCost[]
+
   @@index([name])
   @@map("cities")
 }
@@ -356,4 +359,47 @@ model RefreshToken {
   @@index([userId])
   @@index([expiresAt])
   @@map("refresh_tokens")
+}
+
+// === Aggregator & External Data ===
+model LivingCost {
+  id        String   @id @default(uuid()) @map("id_living_cost") @db.Uuid
+  cityId    String   @map("city_id") @db.Uuid
+  year      Int
+  index     Decimal  @map("index") @db.Decimal(8, 2)
+  currency  String   @default("IDR") @db.VarChar(10)
+  sourceUrl String?  @map("source_url")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  city City @relation(fields: [cityId], references: [id])
+
+  @@unique([cityId, year])
+  @@index([cityId])
+  @@index([year])
+  @@map("living_cost")
+}
+
+model AggregatorLog {
+  id           String   @id @default(uuid()) @map("id_aggregator_log") @db.Uuid
+  cityId       String?  @map("city_id") @db.Uuid
+  year         Int?
+  type         String   @db.VarChar(20) // "umk" or "living_cost"
+  chosenSource String?  @map("chosen_source") @db.VarChar(100)
+  confidence   Decimal? @db.Decimal(5, 2)
+  status       String   @default("success") @db.VarChar(20)
+  message      String?  @db.VarChar(255)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  city City? @relation(fields: [cityId], references: [id])
+
+  @@index([cityId])
+  @@index([year])
+  @@index([type])
+  @@map("aggregator_logs")
+}
+
+generator erd {
+  provider = "prisma-erd-generator"
+  output = "./docs/db_erd.svg"
 }
