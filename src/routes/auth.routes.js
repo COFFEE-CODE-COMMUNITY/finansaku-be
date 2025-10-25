@@ -1,5 +1,15 @@
 import express from 'express'
-import { register, login, me, logout, refresh, revoke } from '../controllers/auth.controller.js'
+import {
+  register,
+  login,
+  me,
+  logout,
+  refresh,
+  revoke,
+  verifyEmail,
+  forgotPassword,
+  resetPassword,
+} from '../controllers/auth.controller.js'
 import { authenticate } from '../middlewares/auth.middleware.js'
 import { googleRedirect, googleCallback } from '../controllers/google.controller.js'
 
@@ -18,5 +28,10 @@ router.post('/revoke', authenticate, revoke)
 // === Google OAuth2 Routes ===
 router.get('/google', googleRedirect)
 router.get('/google/callback', googleCallback)
+
+// === Email Verification & Password Recovery ===
+router.get('/verify-email', verifyEmail)
+router.post('/forgot-password', forgotPassword)
+router.post('/reset-password', resetPassword)
 
 export default router
