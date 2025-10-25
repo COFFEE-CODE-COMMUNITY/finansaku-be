@@ -1,11 +1,7 @@
 import dotenv from "dotenv"
-import pkg from "@prisma/client"
-
-const { PrismaClient } = pkg
+import { prisma } from '../../lib/prisma.js'
 
 dotenv.config()
-
-const prisma = new PrismaClient()
 
 async function main() {
   console.log("DIRECT_URL =", process.env.DIRECT_URL)

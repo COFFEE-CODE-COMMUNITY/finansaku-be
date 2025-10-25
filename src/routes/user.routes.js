@@ -1,12 +1,23 @@
-import express from "express"
-import * as userController from "../controllers/user.controller.js"
+import { Router } from 'express'
+import { authenticate } from '../middlewares/auth.middleware.js'
+import {
+  changeEmail,
+  confirmEmailChange,
+  changePassword,
+} from '../controllers/user.controller.js'
 
-const router = express.Router()
+const router = Router()
 
-router.get("/", userController.getAllUsers)
-router.get("/:id", userController.getUserById)
-router.post("/", userController.createUser)
-router.patch("/:id", userController.updateUser)
-router.delete("/:id", userController.deleteUser)
+// === PATCH /api/v1/user/change-email ===
+// Sends confirmation link to new email
+router.patch('/change-email', authenticate, changeEmail)
+
+// === GET /api/v1/user/confirm-email-change ===
+// Confirms new email via token
+router.get('/confirm-email-change', confirmEmailChange)
+
+// === PATCH /api/v1/user/change-password ===
+// Changes current password with verification
+router.patch('/change-password', authenticate, changePassword)
 
 export default router

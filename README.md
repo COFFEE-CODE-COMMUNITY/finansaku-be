@@ -142,6 +142,38 @@ Refer to the [`/docs`](./docs) directory for full details:
 
 ---
 
+## Monitoring & Logging
+
+The backend uses **Winston** for structured logging and **Sentry** for optional runtime monitoring.  
+Logs are stored under the `/logs` directory and automatically rotated per environment.
+
+---
+
+## Security & Rate Limiting
+
+Global and authentication-specific rate limiters are configured via **express-rate-limit**.  
+Settings can be adjusted using the following `.env` variables:
+
+```bash
+RATE_LIMIT_GLOBAL=100
+RATE_LIMIT_AUTH=10
+RATE_LIMIT_WINDOW_MS=60000
+````
+
+---
+
+## Redis Integration
+
+Redis is used for caching and token/session handling.
+For local testing without a VM, the backend will log a warning instead of crashing.
+Make sure your `.env` includes:
+
+```bash
+REDIS
+```
+
+---
+
 ## License
 
 This project is maintained under the **Coffee Code Community** capstone program.

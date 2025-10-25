@@ -64,7 +64,7 @@ erDiagram
   AllocationTemplate ||--o{ AllocationTemplateItem : contains
   User ||--o| AllocationTemplate : uses
   Announcement ||--o{ Notification : triggers
-````
+```
 
 ---
 
