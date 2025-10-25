@@ -5,32 +5,29 @@ import { signTokens } from '../utils/jwt.js'
 const prisma = new PrismaClient()
 
 // === Register New User ===
-export async function registerUser({ name, username, email, password, cityId, templateId }) {
-  // Check if the email is already registered
+export async function registerUser({ name, username, email, password }) {
+  // Check if email already exists
   const existing = await prisma.user.findUnique({ where: { email } })
   if (existing) throw new Error('Email already registered')
 
-  // Hash the password for security
+  // Hash password securely
   const hashedPassword = await bcrypt.hash(password, 10)
 
-  // Create the user record
+  // Create user record
   const user = await prisma.user.create({
     data: {
       name,
       username,
       email,
       password: hashedPassword,
-      city: { connect: { id: cityId } },
-      template: { connect: { id: templateId } },
     },
     include: { city: true, template: true },
   })
 
-  // Generate tokens for the newly registered user
-  const accessToken = signTokens({ userId: user.id })
-  const refreshToken = signTokens({ userId: user.id })
+  // Generate both tokens once
+  const { accessToken, refreshToken } = signTokens({ userId: user.id })
 
-  // Store the refresh token in the database
+  // Store only refresh token in DB (not access)
   await prisma.refreshToken.create({
     data: {
       userId: user.id,
@@ -44,19 +41,18 @@ export async function registerUser({ name, username, email, password, cityId, te
 
 // === Authenticate User Login ===
 export async function loginUser({ email, password }) {
-  // Find the user by email
+  // Find user
   const user = await prisma.user.findUnique({ where: { email } })
-  if (!user) throw new Error('Invalid email or password')
+  if (!user || !user.password) throw new Error('Invalid email or password')
 
-  // Compare hashed password
+  // Verify password
   const valid = await bcrypt.compare(password, user.password)
   if (!valid) throw new Error('Invalid email or password')
 
-  // Generate new tokens
-  const accessToken = signTokens({ userId: user.id })
-  const refreshToken = signTokens({ userId: user.id })
+  // Generate both tokens once
+  const { accessToken, refreshToken } = signTokens({ userId: user.id })
 
-  // Store the refresh token for session tracking
+  // Store only refresh token in DB
   await prisma.refreshToken.create({
     data: {
       userId: user.id,

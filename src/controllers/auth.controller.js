@@ -14,21 +14,13 @@ const log = createLogger('AUTH')
 // Registers a new user and returns token cookie
 export const register = async (req, res, next) => {
   try {
-    const { name, username, email, password, cityId, templateId } = req.body
-
-    if (!cityId || !templateId) {
-      const error = new Error('cityId and templateId are required')
-      error.statusCode = 400
-      throw error
-    }
+    const { name, username, email, password } = req.body
 
     const result = await authService.registerUser({
       name,
       username,
       email,
       password,
-      cityId,
-      templateId,
     })
 
     // === Send verification email ===
@@ -92,8 +84,6 @@ export const me = async (req, res) => {
       name: req.user.name,
       username: req.user.username,
       email: req.user.email,
-      cityId: req.user.cityId,
-      templateId: req.user.templateId,
     },
   })
 }
