@@ -18,6 +18,7 @@
     "prisma:studio": "prisma studio",
     "seed": "node prisma/seed.js",
     "test": "cross-env NODE_ENV=test NODE_OPTIONS=--experimental-vm-modules jest",
+    "test:emails": "node scripts/mail-test.js all",
     "sentry:sourcemaps": "npx sentry-cli sourcemaps upload --org doaesque --project finansaku-be ./src --release 1.0.0"
   },
   "keywords": [
@@ -32,7 +33,7 @@
   "author": "FinanSaku Backend Team",
   "license": "ISC",
   "dependencies": {
-    "@prisma/client": "^6.18.0",
+    "@prisma/client": "^6.17.1",
     "@sentry/cli": "^2.57.0",
     "@sentry/node": "^10.21.0",
     "bcrypt": "^6.0.0",
@@ -41,8 +42,15 @@
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "express-rate-limit": "^8.1.0",
+    "handlebars": "^4.7.8",
+    "handlebars-layouts": "^3.1.4",
     "jsonwebtoken": "^9.0.2",
+    "juice": "^11.0.3",
+    "node-cron": "^4.2.1",
+    "nodemailer": "^7.0.10",
+    "prisma": "^6.17.1",
     "redis": "^5.8.3",
+    "resend": "^6.2.2",
     "winston": "^3.18.3"
   },
   "devDependencies": {
@@ -55,7 +63,6 @@
     "globals": "^16.4.0",
     "jest": "^30.2.0",
     "nodemon": "^3.1.10",
-    "prisma": "^6.18.0",
     "prisma-erd-generator": "^2.1.0",
     "supertest": "^7.1.4"
   }
