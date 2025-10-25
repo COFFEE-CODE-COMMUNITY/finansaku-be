@@ -2,22 +2,30 @@ import fs from 'node:fs'
 import path from 'node:path'
 import nodemailer from 'nodemailer'
 import { Resend } from 'resend'
+import handlebars from 'handlebars'
+import layouts from 'handlebars-layouts'
+import juice from 'juice'
 import logger from '../config/logger.js'
 
-// === Load HTML template and inject variables ===
+// === Register base layout & helpers ===
+const baseLayout = fs.readFileSync(path.resolve('src/templates/base.html'), 'utf8')
+handlebars.registerPartial('base', baseLayout)
+layouts.register(handlebars)
+
+// === Load, compile, and inline HTML template ===
 const loadTemplate = (templateName, variables = {}) => {
   const templatePath = path.resolve('src/templates', `${templateName}.html`)
-  let html = fs.readFileSync(templatePath, 'utf8')
-
-  // Replace {{variable}} placeholders with actual values
-  for (const [key, value] of Object.entries(variables)) {
-    html = html.replace(new RegExp(`{{${key}}}`, 'g'), value)
+  if (!fs.existsSync(templatePath)) {
+    throw new Error(`Template not found: ${templatePath}`)
   }
 
-  return html
+  const rawHtml = fs.readFileSync(templatePath, 'utf8')
+  const compiled = handlebars.compile(rawHtml)
+  const renderedHtml = compiled(variables)
+  return juice(renderedHtml)
 }
 
-// === Choose mail transport ===
+// === Choose mail transport (Resend or SMTP) ===
 let mailClient = null
 
 if (process.env.RESEND_API_KEY) {
@@ -43,6 +51,7 @@ if (process.env.RESEND_API_KEY) {
       pass: process.env.MAIL_PASS,
     },
   })
+
   mailClient = {
     send: async ({ to, subject, html }) => {
       await transporter.sendMail({
@@ -53,6 +62,7 @@ if (process.env.RESEND_API_KEY) {
       })
     },
   }
+
   logger.info('📨 Using Nodemailer (SMTP)')
 }
 
@@ -66,18 +76,18 @@ export const sendEmail = async (to, subject, html) => {
   }
 }
 
-// === Specific templates ===
-export const sendVerificationEmail = async (to, verifyUrl) => {
-  const html = loadTemplate('verify-email', { verifyUrl })
-  await sendEmail(to, 'Verify your FinanSaku account', html)
+// === Specific template senders ===
+export const sendVerificationEmail = async (to, name, verifyUrl) => {
+  const html = loadTemplate('verify-email', { name, verifyUrl })
+  await sendEmail(to, 'Verifikasi Akun FinanSaku Anda', html)
 }
 
-export const sendResetPasswordEmail = async (to, resetUrl) => {
-  const html = loadTemplate('reset-password', { resetUrl })
-  await sendEmail(to, 'Reset your FinanSaku password', html)
+export const sendResetPasswordEmail = async (to, name, resetUrl) => {
+  const html = loadTemplate('reset-password', { name, resetUrl })
+  await sendEmail(to, 'Atur Ulang Kata Sandi FinanSaku Anda', html)
 }
 
-export const sendEmailChangeConfirmation = async (to, confirmUrl) => {
-  const html = loadTemplate('email-change', { confirmUrl })
-  await sendEmail(to, 'Confirm your new FinanSaku email address', html)
+export const sendEmailChangeConfirmation = async (to, name, confirmUrl) => {
+  const html = loadTemplate('email-change', { name, confirmUrl })
+  await sendEmail(to, 'Konfirmasi Perubahan Email FinanSaku', html)
 }
