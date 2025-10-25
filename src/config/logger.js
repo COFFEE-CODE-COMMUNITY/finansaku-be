@@ -1,6 +1,14 @@
 import winston from 'winston'
+import fs from 'fs'
+import path from 'path'
 
 const { combine, timestamp, printf, colorize } = winston.format
+const logDir = process.env.LOG_DIR || 'logs'
+
+// === Ensure log directory exists ===
+if (!fs.existsSync(logDir)) {
+  fs.mkdirSync(logDir, { recursive: true })
+}
 
 // === Custom log format ===
 const logFormat = printf(({ level, message, timestamp, stack }) => {
@@ -9,7 +17,7 @@ const logFormat = printf(({ level, message, timestamp, stack }) => {
 
 // === Winston Logger Configuration ===
 const logger = winston.createLogger({
-  level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
+  level: process.env.LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 'info' : 'debug'),
   format: combine(
     colorize(),
     timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
@@ -19,16 +27,15 @@ const logger = winston.createLogger({
   transports: [
     new winston.transports.Console(),
     new winston.transports.File({
-      filename: 'logs/error.log',
+      filename: path.join(logDir, 'error.log'),
       level: 'error',
     }),
     new winston.transports.File({
-      filename: 'logs/combined.log',
+      filename: path.join(logDir, 'combined.log'),
     }),
   ],
 })
 
-// In development, also log to console with color
 if (process.env.NODE_ENV !== 'production') {
   logger.debug('🪵 Winston logger initialized (development mode)')
 }

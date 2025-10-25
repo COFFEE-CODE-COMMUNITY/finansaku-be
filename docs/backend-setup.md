@@ -30,7 +30,7 @@ Clone the repository and install dependencies:
 git clone https://github.com/COFFEE-CODE-COMMUNITY/finansaku-be.git
 cd finansaku-be
 npm install
-````
+```
 
 ---
 

@@ -1,10 +1,8 @@
 import dotenv from "dotenv"
-import pkg from "@prisma/client"
 import crypto from "node:crypto"
+import { prisma } from '../../lib/prisma.js'
 
 dotenv.config()
-const { PrismaClient } = pkg
-const prisma = new PrismaClient()
 
 async function main() {
   console.log("🧪 Running CRUD test...")

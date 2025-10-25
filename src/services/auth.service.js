@@ -1,41 +1,33 @@
 import bcrypt from 'bcrypt'
-import { PrismaClient } from '@prisma/client'
-import { signTokens } from '../utils/jwt.js'
-
-const prisma = new PrismaClient()
+import { prisma } from '../lib/prisma.js'
+import { issueTokens } from '../utils/jwt.js'
+import { generateToken, consumeToken } from '../utils/tokenCache.js'
+import {
+  sendVerificationEmail,
+  sendResetPasswordEmail,
+} from './mail.service.js'
 
 // === Register New User ===
-export async function registerUser({ name, username, email, password, cityId, templateId }) {
-  // Check if the email is already registered
+export async function registerUser({ name, username, email, password }) {
   const existing = await prisma.user.findUnique({ where: { email } })
   if (existing) throw new Error('Email already registered')
 
-  // Hash the password for security
   const hashedPassword = await bcrypt.hash(password, 10)
 
-  // Create the user record
   const user = await prisma.user.create({
-    data: {
-      name,
-      username,
-      email,
-      password: hashedPassword,
-      city: { connect: { id: cityId } },
-      template: { connect: { id: templateId } },
-    },
+    data: { name, username, email, password: hashedPassword },
     include: { city: true, template: true },
   })
 
-  // Generate tokens for the newly registered user
-  const accessToken = signTokens({ userId: user.id })
-  const refreshToken = signTokens({ userId: user.id })
+  // ✅ Generate proper tokens
+  const { accessToken, refreshToken } = issueTokens(user.id, user.email)
 
-  // Store the refresh token in the database
+  // ✅ Store refresh token as string (not object)
   await prisma.refreshToken.create({
     data: {
       userId: user.id,
       token: refreshToken,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     },
   })
 
@@ -44,19 +36,14 @@ export async function registerUser({ name, username, email, password, cityId, te
 
 // === Authenticate User Login ===
 export async function loginUser({ email, password }) {
-  // Find the user by email
   const user = await prisma.user.findUnique({ where: { email } })
-  if (!user) throw new Error('Invalid email or password')
+  if (!user || !user.password) throw new Error('Invalid email or password')
 
-  // Compare hashed password
   const valid = await bcrypt.compare(password, user.password)
   if (!valid) throw new Error('Invalid email or password')
 
-  // Generate new tokens
-  const accessToken = signTokens({ userId: user.id })
-  const refreshToken = signTokens({ userId: user.id })
+  const { accessToken, refreshToken } = issueTokens(user.id, user.email)
 
-  // Store the refresh token for session tracking
   await prisma.refreshToken.create({
     data: {
       userId: user.id,
@@ -71,8 +58,50 @@ export async function loginUser({ email, password }) {
 // === Revoke All Refresh Tokens for a User ===
 export async function revokeTokens(userId) {
   await prisma.refreshToken.updateMany({
-    where: { userId },
+    where: { userId, revoked: false },
     data: { revoked: true },
   })
   return true
+}
+
+// === Send Verification Email ===
+export async function sendEmailVerification(user) {
+  const token = await generateToken('verify', user.id)
+  const verifyUrl = `${process.env.CLIENT_WEB_REDIRECT}/verify-email?token=${token}`
+  await sendVerificationEmail(user.email, user.name, verifyUrl)
+  return token
+}
+
+// === Verify Email Token ===
+export async function verifyEmailToken(token) {
+  const userId = await consumeToken('verify', token)
+  if (!userId) throw new Error('Invalid or expired token')
+
+  return await prisma.user.update({
+    where: { id: userId },
+    data: { emailVerifiedAt: new Date() },
+  })
+}
+
+// === Send Password Reset Email ===
+export async function sendPasswordReset(email) {
+  const user = await prisma.user.findUnique({ where: { email } })
+  if (!user) throw new Error('Email not found')
+
+  const token = await generateToken('reset', user.id)
+  const resetUrl = `${process.env.CLIENT_WEB_REDIRECT}/reset-password?token=${token}`
+  await sendResetPasswordEmail(user.email, user.name, resetUrl)
+  return token
+}
+
+// === Reset Password ===
+export async function resetPassword(token, newPassword) {
+  const userId = await consumeToken('reset', token)
+  if (!userId) throw new Error('Invalid or expired token')
+
+  const hashed = await bcrypt.hash(newPassword, 10)
+  return await prisma.user.update({
+    where: { id: userId },
+    data: { password: hashed },
+  })
 }

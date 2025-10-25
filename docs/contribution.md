@@ -23,7 +23,7 @@ and each member’s role and responsibilities.
 
 ---
 
-### 1.1. **Backend A – Core & Infrastructure Lead**
+### 1.1 **Backend A – Core & Infrastructure Lead**
 
 **Focus:** System setup, authentication, database, and deployment.
 **Main Responsibility:** Ensure the backend _runs properly_ — including database reliability, API security, and deployment infrastructure.
@@ -46,7 +46,7 @@ and each member’s role and responsibilities.
 
 ---
 
-### 1.2. **Backend B – API & Integration Lead**
+### 1.2 **Backend B – API & Integration Lead**
 
 **Focus:** Functional endpoints, validation, and frontend integration.
 **Main Responsibility:** Ensure the frontend _can interact smoothly_ with the backend.

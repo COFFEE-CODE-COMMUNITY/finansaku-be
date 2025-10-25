@@ -1,9 +1,8 @@
 import crypto from 'node:crypto'
-import { PrismaClient } from '@prisma/client'
-const prisma = new PrismaClient()
+import { prisma } from '../lib/prisma.js'
 
 import { GoogleProfileDto } from '../dto/google-profile.dto.js'
-import { signTokens } from '../utils/jwt.js'
+import { issueTokens } from '../utils/jwt.js'
 import { defaultCookieOptions } from '../config/cookieOptions.js'
 import { createLogger } from '../utils/scopedLogger.js'
 
@@ -160,7 +159,7 @@ export const googleCallback = async (req, res, next) => {
     })
 
     // === Generate tokens ===
-    const { accessToken, refreshToken } = await signTokens(user)
+    const { accessToken, refreshToken } = await issueTokens(user)
 
     // === Set cookie and redirect ===
     res.cookie('refreshToken', refreshToken, {
