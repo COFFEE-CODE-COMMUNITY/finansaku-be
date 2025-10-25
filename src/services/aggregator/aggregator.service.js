@@ -1,9 +1,6 @@
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '../../lib/prisma.js'
 import logger from '../../config/logger.js'
 import { redis, isRedisEnabled } from '../../config/redis.js'
-
-// === Prisma Client ===
-const prisma = new PrismaClient()
 
 // === Environment Variables ===
 const BPS_API_KEY = process.env.BPS_API_KEY || ''
