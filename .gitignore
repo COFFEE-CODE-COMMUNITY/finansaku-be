@@ -16,3 +16,4 @@ pnpm-debug.log*
 
 # Sentry Config File
 .sentryclirc
+.sh
