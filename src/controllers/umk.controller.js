@@ -6,7 +6,8 @@ export const getAllUMK = async (req, res) => {
     const data = await umkService.findAll()
     return ok(res, "UMK list fetched successfully", data)
   } catch (error) {
-    return fail(res, error.message)
+    const status = error.statusCode || 500
+    return fail(res, error.message || "Failed to fetch UMK list", status)
   }
 }
 
@@ -16,15 +17,18 @@ export const getUMKById = async (req, res) => {
     if (!data) return fail(res, "UMK not found", 404)
     return ok(res, "UMK fetched successfully", data)
   } catch (error) {
-    return fail(res, error.message)
+    const status = error.statusCode || 500
+    return fail(res, error.message || "Failed to fetch UMK", status)
   }
 }
 
 export const updateUMK = async (req, res) => {
   try {
     const updated = await umkService.update(req.params.id, req.body)
+    if (!updated) return fail(res, "UMK not found", 404)
     return ok(res, "UMK updated successfully", updated)
   } catch (error) {
-    return fail(res, error.message)
+    const status = error.statusCode || 400
+    return fail(res, error.message || "Failed to update UMK", status)
   }
 }

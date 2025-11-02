@@ -1,4 +1,4 @@
-import { prisma } from '../../lib/prisma.js'
+import { prisma } from '../../config/prisma.js'
 import logger from '../../config/logger.js'
 import { redis, isRedisEnabled } from '../../config/redis.js'
 

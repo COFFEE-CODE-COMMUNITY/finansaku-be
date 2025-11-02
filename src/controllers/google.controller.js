@@ -1,27 +1,22 @@
 import crypto from 'node:crypto'
-import { prisma } from '../lib/prisma.js'
-
-import { GoogleProfileDto } from '../dto/google-profile.dto.js'
+import { prisma } from '../config/prisma.js'
 import { issueTokens } from '../utils/jwt.js'
 import { defaultCookieOptions } from '../config/cookieOptions.js'
 import { createLogger } from '../utils/scopedLogger.js'
+import config from '../config/index.js'
 
 const log = createLogger('OAUTH')
 
-// === Google OAuth2 Constants ===
-const GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth'
-const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token'
-const GOOGLE_USERINFO_URL = 'https://www.googleapis.com/oauth2/v3/userinfo'
+const GOOGLE_AUTH_URL = config.googleAuthUrl
+const GOOGLE_TOKEN_URL = config.googleTokenUrl
+const GOOGLE_USERINFO_URL = config.googleUserInfoUrl
 
-// === Development State Store (for localhost only) ===
 const devStateStore = new Map()
 
-// === Redirect Handler ===
-// Redirect user to Google's consent screen
-export const googleRedirect = (req, res, next) => {
+export const googleRedirect = (req, res) => {
   try {
     const state = crypto.randomUUID()
-    const isProduction = process.env.NODE_ENV === 'production'
+    const isProduction = config.nodeEnv === 'production'
 
     if (isProduction) {
       res.cookie('oauth_state', state, {
@@ -39,63 +34,53 @@ export const googleRedirect = (req, res, next) => {
       GOOGLE_AUTH_URL +
       '?' +
       new URLSearchParams({
-        client_id: process.env.GOOGLE_CLIENT_ID,
-        redirect_uri: process.env.GOOGLE_REDIRECT_URI,
+        client_id: config.googleClientId,
+        redirect_uri: config.googleRedirectUri,
         response_type: 'code',
         scope: 'openid email profile',
         state,
       }).toString()
 
     log.info('[GOOGLE OAUTH] Redirecting user', {
-      env: process.env.NODE_ENV,
+      env: config.nodeEnv,
       usingCookie: isProduction,
       state,
     })
 
     res.redirect(redirectUrl)
   } catch (err) {
-    next(err)
+    const status = err.statusCode || 500
+    res.status(status).json({ success: false, message: err.message || 'Failed to initialize Google OAuth redirect' })
   }
 }
 
-// === Callback Handler ===
-// Handle Google's callback and exchange code for tokens
-export const googleCallback = async (req, res, next) => {
+export const googleCallback = async (req, res) => {
   try {
     const { state, code } = req.query
     const stateCookie = req.cookies.oauth_state
-    const isProduction = process.env.NODE_ENV === 'production'
+    const isProduction = config.nodeEnv === 'production'
 
-    // === Validate OAuth state ===
     const valid = isProduction
       ? stateCookie && state === stateCookie
       : devStateStore.has(state)
 
-    if (!valid) {
-      const error = new Error('Invalid OAuth state')
-      error.statusCode = 400
-      throw error
-    }
+    if (!valid)
+      return res.status(400).json({ success: false, message: 'Invalid OAuth state' })
 
-    // Cleanup stored state
     if (isProduction) res.clearCookie('oauth_state')
     else devStateStore.delete(state)
 
-    if (!code) {
-      const error = new Error('Missing authorization code')
-      error.statusCode = 400
-      throw error
-    }
+    if (!code)
+      return res.status(400).json({ success: false, message: 'Missing authorization code' })
 
-    // === Exchange code for access token ===
     const tokenRes = await fetch(GOOGLE_TOKEN_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
         code,
-        client_id: process.env.GOOGLE_CLIENT_ID,
-        client_secret: process.env.GOOGLE_CLIENT_SECRET,
-        redirect_uri: process.env.GOOGLE_REDIRECT_URI,
+        client_id: config.googleClientId,
+        client_secret: config.googleClientSecret,
+        redirect_uri: config.googleRedirectUri,
         grant_type: 'authorization_code',
       }),
     })
@@ -103,19 +88,13 @@ export const googleCallback = async (req, res, next) => {
     if (!tokenRes.ok) {
       const errText = await tokenRes.text()
       log.error('[GOOGLE OAUTH] Token exchange failed', errText)
-      const error = new Error('Failed to exchange token with Google')
-      error.statusCode = 400
-      throw error
+      return res.status(400).json({ success: false, message: 'Failed to exchange token with Google' })
     }
 
     const tokens = await tokenRes.json()
-    if (!tokens.access_token) {
-      const error = new Error('Access token not received from Google')
-      error.statusCode = 400
-      throw error
-    }
+    if (!tokens.access_token)
+      return res.status(400).json({ success: false, message: 'Access token not received from Google' })
 
-    // === Fetch user profile ===
     const profileRes = await fetch(GOOGLE_USERINFO_URL, {
       headers: { Authorization: `Bearer ${tokens.access_token}` },
     })
@@ -123,45 +102,64 @@ export const googleCallback = async (req, res, next) => {
     if (!profileRes.ok) {
       const errText = await profileRes.text()
       log.error('[GOOGLE OAUTH] Profile fetch failed', errText)
-      const error = new Error('Failed to fetch Google profile')
-      error.statusCode = 400
-      throw error
+      return res.status(400).json({ success: false, message: 'Failed to fetch Google profile' })
     }
 
     const profile = await profileRes.json()
-    if (!profile.email) {
-      const error = new Error('Google profile missing email')
-      error.statusCode = 400
-      throw error
+    const { email, name, picture, sub, id } = profile
+    const provider = 'google'
+    const providerId = sub || id
+
+    if (!email)
+      return res.status(400).json({ success: false, message: 'Google profile missing email' })
+
+    let user = await prisma.user.findUnique({ where: { email } })
+
+    if (user) {
+      if (!user.emailVerifiedAt) {
+        user = await prisma.user.update({
+          where: { email },
+          data: { emailVerifiedAt: new Date() },
+        })
+      }
+    } else {
+      user = await prisma.user.create({
+        data: {
+          id: crypto.randomUUID(),
+          email,
+          name,
+          username: email.split('@')[0],
+          profileImage: picture,
+          emailVerifiedAt: new Date(),
+        },
+      })
+      log.info('[GOOGLE OAUTH] Created new user via Google', { email })
     }
 
-    // === Upsert user ===
-    const data = new GoogleProfileDto(profile)
-    const user = await prisma.user.upsert({
-      where: { email: data.email },
+    await prisma.oAuthAccount.upsert({
+      where: { provider_providerId: { provider, providerId } },
       update: {
-        name: data.name,
-        profileImage: data.picture,
-        emailVerifiedAt: new Date(),
-        provider: 'google',
-        providerId: data.sub || data.id,
+        accessToken: tokens.access_token,
+        refreshToken: tokens.refresh_token,
+        expiresAt: tokens.expires_in
+          ? new Date(Date.now() + tokens.expires_in * 1000)
+          : null,
       },
       create: {
         id: crypto.randomUUID(),
-        email: data.email,
-        name: data.name,
-        username: data.email.split('@')[0],
-        profileImage: data.picture,
-        emailVerifiedAt: new Date(),
-        provider: 'google',
-        providerId: data.sub || data.id,
+        userId: user.id,
+        provider,
+        providerId,
+        accessToken: tokens.access_token,
+        refreshToken: tokens.refresh_token,
+        expiresAt: tokens.expires_in
+          ? new Date(Date.now() + tokens.expires_in * 1000)
+          : null,
       },
     })
 
-    // === Generate tokens ===
     const { accessToken, refreshToken } = await issueTokens(user)
 
-    // === Set cookie and redirect ===
     res.cookie('refreshToken', refreshToken, {
       ...defaultCookieOptions,
       secure: isProduction,
@@ -169,10 +167,13 @@ export const googleCallback = async (req, res, next) => {
     })
 
     log.info('[GOOGLE OAUTH] User logged in', { email: user.email })
-    return res.redirect(`${process.env.CLIENT_WEB_REDIRECT}?token=${accessToken}`)
+    return res.redirect(`${config.clientRedirectUrl}?token=${accessToken}`)
   } catch (err) {
     log.error('GOOGLE OAUTH ERROR', err)
-    err.statusCode = err.statusCode || 500
-    next(err)
+    const status = err.statusCode || 500
+    res.status(status).json({
+      success: false,
+      message: err.message || 'Internal server error during Google OAuth',
+    })
   }
 }
