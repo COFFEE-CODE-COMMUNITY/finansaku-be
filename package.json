@@ -5,11 +5,9 @@
   "description": "FinanSaku backend — Express + Prisma + PostgreSQL API with authentication, rate limiting, and testing setup.",
   "main": "src/server.js",
   "scripts": {
-    "start": "node --import ./src/instrument.js src/server.js",
-    "dev": "nodemon --import ./src/instrument.js src/server.js",
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
     "build": "node --enable-source-maps ./src/server.js",
-    "deploy": "npm run build && sentry-cli releases new $npm_package_version && sentry-cli releases finalize $npm_package_version",
-    "sentry:debug": "curl http://localhost:8081/debug-sentry",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "prisma:generate": "prisma generate",
@@ -18,8 +16,7 @@
     "prisma:studio": "prisma studio",
     "seed": "node prisma/seed.js",
     "test": "cross-env NODE_ENV=test NODE_OPTIONS=--experimental-vm-modules jest",
-    "test:emails": "node scripts/mail-test.js all",
-    "sentry:sourcemaps": "npx sentry-cli sourcemaps upload --org doaesque --project finansaku-be ./src --release 1.0.0"
+    "test:emails": "node tests/mailTest.js all"
   },
   "keywords": [
     "finansaku",
@@ -34,8 +31,6 @@
   "license": "ISC",
   "dependencies": {
     "@prisma/client": "^6.17.1",
-    "@sentry/cli": "^2.57.0",
-    "@sentry/node": "^10.21.0",
     "bcrypt": "^6.0.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
