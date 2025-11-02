@@ -1,7 +1,7 @@
 ---
 aliases: [contribution]
 description: Collaboration, merge workflow, and team roles guide for the FinanSaku backend team.
-lastUpdated: 2025-10-22
+lastUpdated: 2025-11-02
 maintainer: FinanSaku Backend Team
 ---
 
@@ -41,7 +41,6 @@ and each member’s role and responsibilities.
 - Manage **Aggregator Service** for UMK & cost-of-living data
 - Add **rate limiting & security middlewares**
 - Setup **PM2, Nginx, SSL**, and optional **Redis cache**
-- Integrate optional **Sentry monitoring**
 - Maintain backend documentation and deployment workflows
 
 ---

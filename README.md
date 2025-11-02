@@ -1,3 +1,10 @@
+---
+aliases: [readme, overview, setup, backend]
+description: FinanSaku backend overview, setup instructions, and contribution workflow guide.
+lastUpdated: 2025-11-02
+maintainer: FinanSaku Backend Team
+---
+
 # FinanSaku Backend
 
 > Status: Active Development (v0.1.0)
@@ -144,21 +151,21 @@ Refer to the [`/docs`](./docs) directory for full details:
 
 ## Monitoring & Logging
 
-The backend uses **Winston** for structured logging and **Sentry** for optional runtime monitoring.  
+The backend uses **Winston** for structured logging.
 Logs are stored under the `/logs` directory and automatically rotated per environment.
 
 ---
 
 ## Security & Rate Limiting
 
-Global and authentication-specific rate limiters are configured via **express-rate-limit**.  
+Global and authentication-specific rate limiters are configured via **express-rate-limit**.
 Settings can be adjusted using the following `.env` variables:
 
 ```bash
 RATE_LIMIT_GLOBAL=100
 RATE_LIMIT_AUTH=10
 RATE_LIMIT_WINDOW_MS=60000
-````
+```
 
 ---
 
