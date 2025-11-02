@@ -1,6 +1,6 @@
 {
   "name": "finansaku-be",
-  "version": "1.0.0",
+  "version": "0.1.0-dev",
   "type": "module",
   "description": "FinanSaku backend — Express + Prisma + PostgreSQL API with authentication, rate limiting, and testing setup.",
   "main": "src/server.js",
