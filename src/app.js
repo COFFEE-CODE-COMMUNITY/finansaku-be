@@ -1,5 +1,4 @@
 import express from 'express'
-import dotenv from 'dotenv'
 import cors from 'cors'
 import cookieParser from 'cookie-parser'
 
@@ -9,11 +8,6 @@ import { requestLogger } from './middlewares/requestLogger.js'
 import authRoutes from './routes/auth.routes.js'
 import logger from './config/logger.js'
 import { redis } from './config/redis.js' // eslint-disable-line no-unused-vars
-
-// === Load Environment Variables ===
-dotenv.config({
-  path: process.env.NODE_ENV === 'production' ? '.env.production' : '.env'
-})
 
 // === Initialize Express App ===
 const app = express()
