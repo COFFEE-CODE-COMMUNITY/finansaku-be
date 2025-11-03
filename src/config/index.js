@@ -1,7 +1,17 @@
 import dotenv from 'dotenv'
-dotenv.config()
 
+// Determine which .env file to load
+const envPath =
+  process.env.NODE_ENV === 'production'
+    ? '.env.production'
+    : '.env'
+
+dotenv.config({ path: envPath })
+console.log(`[env] Loaded environment from ${envPath}`)
+
+// Define central config object
 const config = {
+  // === Environment ===
   nodeEnv: process.env.NODE_ENV || 'development',
   port: process.env.PORT || 8081,
 
