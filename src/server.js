@@ -2,7 +2,9 @@ import dotenv from 'dotenv'
 import app from './app.js'
 
 // === Load environment variables early ===
-dotenv.config()
+dotenv.config({
+  path: process.env.NODE_ENV === 'production' ? '.env.production' : '.env'
+})
 console.log('✅ Environment variables loaded')
 
 // === Define release and environment ===
