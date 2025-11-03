@@ -4,9 +4,11 @@ export const defaultCookieOptions = {
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production', // must be true for HTTPS
   sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // cross-site enabled for prod
-  domain: process.env.NODE_ENV === 'production' ? '.finansaku.space' : undefined,
+  domain:
+    process.env.NODE_ENV === 'production'
+      ? '.finansaku.space'
+      : 'localhost',
   path: '/',
-
 }
 
 // === Cookie Durations (milliseconds) ===
