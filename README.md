@@ -1,10 +1,3 @@
----
-aliases: [readme, overview, setup, backend]
-description: FinanSaku backend overview, setup instructions, and contribution workflow guide.
-lastUpdated: 2025-11-02
-maintainer: FinanSaku Backend Team
----
-
 # FinanSaku Backend
 
 > Status: Active Development (v0.1.0)
