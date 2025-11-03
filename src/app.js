@@ -27,25 +27,14 @@ app.use(requestLogger)
 logger.info('✅ FinanSaku backend starting...')
 
 // === CORS Configuration ===
-const allowedOrigins = [
-  'http://localhost:5173',
-  'https://finansaku.space',
-]
-
 app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true)
-    } else {
-      callback(new Error('Not allowed by CORS'))
-    }
-  },
+  origin: [process.env.CLIENT_URL, 'http://localhost:5173'],
   credentials: true,
 }))
 
-// Handle preflight requests
-app.options('*', cors({
-  origin: allowedOrigins,
+// Handle preflight
+app.options(/.*/, cors({
+  origin: [process.env.CLIENT_URL, 'http://localhost:5173'],
   credentials: true,
 }))
 
