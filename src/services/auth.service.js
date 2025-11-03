@@ -19,10 +19,10 @@ export async function registerUser({ name, username, email, password }) {
     include: { city: true, template: true },
   })
 
-  // ✅ Generate proper tokens
+  // Generate proper tokens
   const { accessToken, refreshToken } = issueTokens(user.id, user.email)
 
-  // ✅ Store refresh token as string (not object)
+  // Store refresh token as string (not object)
   await prisma.refreshToken.create({
     data: {
       userId: user.id,
