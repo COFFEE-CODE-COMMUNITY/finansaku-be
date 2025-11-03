@@ -47,10 +47,10 @@ psql "$DIRECT_URL" -c "\dt public.*"
 Expected output: a list of tables such as `users`, `cities`, `umk`, `saku`, etc.
 
 If you prefer testing Supabase connectivity through Node.js instead of the
-`psql` command, you can use `scripts/test-db.js`:
+`psql` command, you can use `tests/dbTest.js`:
 
 ```bash
-node scripts/test-db.js
+node tests/test-db.js
 ```
 
 **Expected output:**
@@ -126,7 +126,7 @@ Then check:
 Run a local script to test basic create/read/update/delete operations:
 
 ```bash
-node scripts/test-crud.js
+node tests/crudTest.js
 ```
 
 Expected console output:
@@ -214,7 +214,7 @@ Expected sample results:
 | Migrations applied successfully          |        |
 | Constraints verified in Supabase         |        |
 | Seed data inserted and visible           |        |
-| CRUD test passed via `test-crud.js`      |        |
+| CRUD test passed via `crudTest.js`      |        |
 | Schema validated (`npx prisma validate`) |        |
 
 > - ✅ Passed — when you’ve verified it works

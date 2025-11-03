@@ -1,6 +1,6 @@
 import crypto from 'node:crypto'
 import bcrypt from 'bcrypt'
-import { prisma } from '../lib/prisma.js'
+import { prisma } from '../config/prisma.js'
 import { redis } from '../config/redis.js'
 import { sendEmailChangeConfirmation } from '../utils/mailer.js'
 import { success, fail } from '../utils/response.js'
@@ -11,11 +11,14 @@ const log = createLogger('USER')
 
 // === PATCH /user/change-email ===
 // Requests an email change and sends a confirmation link to the new email
-export const changeEmail = async (req, res, next) => {
+export const changeEmail = async (req, res) => {
   try {
     const { newEmail, password } = req.body
-    const user = await prisma.user.findUnique({ where: { id: req.user.id } })
 
+    if (!newEmail || !password)
+      return fail(res, 'New email and password are required', 422)
+
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } })
     if (!user) return fail(res, 'User not found', 404)
 
     const valid = await bcrypt.compare(password, user.password)
@@ -39,20 +42,27 @@ export const changeEmail = async (req, res, next) => {
     })
   } catch (err) {
     log.error('CHANGE EMAIL ERROR', err)
-    next(err)
+    const status = err.statusCode || 500
+    return fail(res, err.message || 'Failed to request email change', status)
   }
 }
 
 // === GET /user/confirm-email-change ===
 // Confirms and applies the new email after user clicks confirmation link
-export const confirmEmailChange = async (req, res, next) => {
+export const confirmEmailChange = async (req, res) => {
   try {
     const { token } = req.query
-    const record = await redis.get(`email-change:${token}`)
+    if (!token) return fail(res, 'Missing token', 422)
 
+    const record = await redis.get(`email-change:${token}`)
     if (!record) return fail(res, 'Invalid or expired token', 400)
 
     const { userId, newEmail } = JSON.parse(record)
+    if (!userId || !newEmail)
+      return fail(res, 'Invalid token payload', 400)
+
+    const existing = await prisma.user.findUnique({ where: { email: newEmail } })
+    if (existing) return fail(res, 'Email already in use', 409)
 
     const updated = await prisma.user.update({
       where: { id: userId },
@@ -73,21 +83,28 @@ export const confirmEmailChange = async (req, res, next) => {
     })
   } catch (err) {
     log.error('CONFIRM EMAIL CHANGE ERROR', err)
-    next(err)
+    const status = err.statusCode || 500
+    return fail(res, err.message || 'Failed to confirm email change', status)
   }
 }
 
 // === PATCH /user/change-password ===
 // Updates user's password after verifying current password
-export const changePassword = async (req, res, next) => {
+export const changePassword = async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body
-    const user = await prisma.user.findUnique({ where: { id: req.user.id } })
 
+    if (!currentPassword || !newPassword)
+      return fail(res, 'Both current and new passwords are required', 422)
+
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } })
     if (!user) return fail(res, 'User not found', 404)
 
     const valid = await bcrypt.compare(currentPassword, user.password)
     if (!valid) return fail(res, 'Invalid current password', 403)
+
+    if (currentPassword === newPassword)
+      return fail(res, 'New password must be different from the current one', 400)
 
     const hashed = await bcrypt.hash(newPassword, 10)
     const updated = await prisma.user.update({
@@ -95,7 +112,6 @@ export const changePassword = async (req, res, next) => {
       data: { password: hashed, updatedAt: new Date() },
     })
 
-    // Invalidate all sessions (logout from all devices)
     await authService.revokeTokens(req.user.id)
 
     return success(res, 'Password changed successfully', {
@@ -105,6 +121,7 @@ export const changePassword = async (req, res, next) => {
     })
   } catch (err) {
     log.error('CHANGE PASSWORD ERROR', err)
-    next(err)
+    const status = err.statusCode || 500
+    return fail(res, err.message || 'Failed to change password', status)
   }
 }

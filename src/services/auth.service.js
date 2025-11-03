@@ -1,5 +1,5 @@
 import bcrypt from 'bcrypt'
-import { prisma } from '../lib/prisma.js'
+import { prisma } from '../config/prisma.js'
 import { issueTokens } from '../utils/jwt.js'
 import { generateToken, consumeToken } from '../utils/tokenCache.js'
 import {

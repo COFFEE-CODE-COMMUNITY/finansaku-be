@@ -6,7 +6,8 @@ export const getAllSaku = async (req, res) => {
     const data = await sakuService.findAll()
     return ok(res, "Saku list fetched successfully", data)
   } catch (error) {
-    return fail(res, error.message)
+    const status = error.statusCode || 500
+    return fail(res, error.message || "Failed to fetch saku list", status)
   }
 }
 
@@ -16,33 +17,40 @@ export const getSakuById = async (req, res) => {
     if (!data) return fail(res, "Saku not found", 404)
     return ok(res, "Saku fetched successfully", data)
   } catch (error) {
-    return fail(res, error.message)
+    const status = error.statusCode || 500
+    return fail(res, error.message || "Failed to fetch saku", status)
   }
 }
 
 export const createSaku = async (req, res) => {
   try {
+    if (!req.body) return fail(res, "Missing request body", 422)
     const newSaku = await sakuService.create(req.body)
-    return ok(res, "Saku created successfully", newSaku)
+    return ok(res, "Saku created successfully", newSaku, 201)
   } catch (error) {
-    return fail(res, error.message)
+    const status = error.statusCode || 400
+    return fail(res, error.message || "Failed to create saku", status)
   }
 }
 
 export const updateSaku = async (req, res) => {
   try {
     const updated = await sakuService.update(req.params.id, req.body)
+    if (!updated) return fail(res, "Saku not found", 404)
     return ok(res, "Saku updated successfully", updated)
   } catch (error) {
-    return fail(res, error.message)
+    const status = error.statusCode || 400
+    return fail(res, error.message || "Failed to update saku", status)
   }
 }
 
 export const deleteSaku = async (req, res) => {
   try {
-    await sakuService.deleteById(req.params.id)
+    const deleted = await sakuService.deleteById(req.params.id)
+    if (!deleted) return fail(res, "Saku not found", 404)
     return ok(res, "Saku deleted successfully")
   } catch (error) {
-    return fail(res, error.message)
+    const status = error.statusCode || 400
+    return fail(res, error.message || "Failed to delete saku", status)
   }
 }

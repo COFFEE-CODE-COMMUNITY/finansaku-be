@@ -1,6 +1,6 @@
 import bcrypt from 'bcrypt'
 import crypto from 'node:crypto'
-import { prisma } from '../lib/prisma.js'
+import { prisma } from '../config/prisma.js'
 import { redis } from '../config/redis.js'
 import { sendEmailChangeConfirmation } from '../utils/mailer.js'
 

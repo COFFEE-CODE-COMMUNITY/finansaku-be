@@ -9,8 +9,8 @@ import juice from "juice"
 dotenv.config()
 
 // Usage:
-//   node scripts/mail-test.js verify-email "John Doe" you@mail.com
-//   node scripts/mail-test.js all "John Doe" you@mail.com
+//   node tests/mailTest.js verify-email "John Doe" you@mail.com
+//   node tests/mailTest.js all "John Doe" you@mail.com
 const [templateArg, nameArg, emailArg, urlArg] = process.argv.slice(2)
 const templateName = templateArg || "verify-email"
 const testName = nameArg || "John Doe"

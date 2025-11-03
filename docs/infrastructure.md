@@ -32,7 +32,7 @@ Example `.env` variables:
 RATE_LIMIT_GLOBAL=100
 RATE_LIMIT_AUTH=10
 RATE_LIMIT_WINDOW_MS=60000
-```
+````
 
 ### 1.3. Behavior
 
@@ -44,7 +44,7 @@ RATE_LIMIT_WINDOW_MS=60000
 
 ## 2. Logging & Error Handling
 
-The backend uses **Winston** for structured logging and **custom error handling middleware** for consistent API responses.
+The backend uses **Winston** for structured logging and a **custom global error handler** for consistent API responses.
 
 ### 2.1. Files
 
@@ -71,41 +71,16 @@ LOG_DIR=logs
 - Console output is colorized for local development.
 - Error details include timestamp, status code, message, and stack trace.
 - All unhandled exceptions are logged by the global error handler.
+- Stack traces are hidden in production responses for security.
 
 ---
 
-## 3. Sentry Monitoring
-
-**Sentry** is integrated for runtime error monitoring in production environments.
-
-### 3.1 Files
-
-| File              | Description                                       |
-| ----------------- | ------------------------------------------------- |
-| `src/app.js`      | Initializes Sentry and registers handlers         |
-| `.env.production` | Contains the Sentry DSN for production monitoring |
-
-### 3.2 Configuration
-
-```bash
-# === Sentry ===
-SENTRY_DSN=https://<your_sentry_key>@oXXXXXX.ingest.sentry.io/XXXXXXX
-```
-
-### 3.3 Behavior
-
-- Sentry initialization only runs when `SENTRY_DSN` is provided.
-- It automatically tracks uncaught exceptions and rejected promises.
-- Works alongside Winston for local and file-based logging.
-
----
-
-## 4. Redis Integration
+## 3. Redis Integration
 
 Redis is used for **token caching, session storage, and rate limit persistence**.
 If Redis is unavailable (e.g., when the VM is not yet deployed), the app logs a warning and continues without crashing.
 
-### 4.1 Files
+### 3.1. Files
 
 | File                       | Description                                                  |
 | -------------------------- | ------------------------------------------------------------ |
@@ -113,7 +88,7 @@ If Redis is unavailable (e.g., when the VM is not yet deployed), the app logs a 
 | `.env` / `.env.production` | Stores Redis connection credentials                          |
 | `src/app.js`               | Imports the Redis client to initialize connection on startup |
 
-### 4.2 Configuration
+### 3.2. Configuration
 
 Example `.env`:
 
@@ -125,7 +100,7 @@ REDIS_PASSWORD=
 REDIS_URL=redis://localhost:6379
 ```
 
-### 4.3 Behavior
+### 3.3. Behavior
 
 - Automatically connects on startup if Redis is available.
 - Displays a warning if Redis connection fails in local mode.
@@ -134,30 +109,30 @@ REDIS_URL=redis://localhost:6379
 
 ---
 
-## 5. Deployment Preparation
+## 4. Deployment Preparation
 
 Before deploying to the production VM, ensure the following components are configured:
 
-| Component      | Description                                   |
-| -------------- | --------------------------------------------- |
-| **PM2**        | Handles process management and auto-restart   |
-| **Nginx**      | Provides HTTPS reverse proxy and routing      |
-| **Redis**      | Enables caching and rate-limiting persistence |
-| **Sentry DSN** | Monitors runtime errors in production         |
+| Component        | Description                                   |
+| ---------------- | --------------------------------------------- |
+| **PM2**          | Handles process management and auto-restart   |
+| **Nginx**        | Provides HTTPS reverse proxy and routing      |
+| **Redis**        | Enables caching and rate-limiting persistence |
+| **Winston Logs** | Monitors application and error logs           |
 
 ### Recommended Steps
 
 1. Install Node.js, PM2, and Nginx on the VM.
 2. Copy `.env.production` to the server and verify credentials.
 3. Configure SSL and reverse proxy on `api.finansaku.space`.
-4. Verify Sentry logging and Redis connection from logs.
+4. Verify Redis connection and logger output in server logs.
 5. Confirm that rate limiting and error logs behave as expected.
 
 ---
 
 ## Notes
 
-- Redis and Sentry integrations are optional in local development.
+- Redis integration is optional in local development.
 - Logging, rate limiting, and error handling work without external dependencies.
 - Deployment configuration will be extended once the VM environment is available.
 - See `/docs/backend-setup.md` for local setup instructions and `/docs/db-schema.md` for database structure.
