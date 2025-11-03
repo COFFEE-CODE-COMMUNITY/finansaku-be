@@ -6,8 +6,8 @@ const envPath =
     ? '.env.production'
     : '.env'
 
-dotenv.config({ path: envPath })
-console.log(`[env] Loaded environment from ${envPath}`)
+dotenv.config({ path: envPath, override: true })
+console.log(`[env] Loaded environment from ${envPath} (override=true)`)
 
 // Define central config object
 const config = {
