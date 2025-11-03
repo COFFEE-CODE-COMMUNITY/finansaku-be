@@ -11,10 +11,20 @@ import logger from './config/logger.js'
 import { redis } from './config/redis.js' // eslint-disable-line no-unused-vars
 
 // === Load Environment Variables ===
-dotenv.config()
+dotenv.config({
+  path: process.env.NODE_ENV === 'production' ? '.env.production' : '.env'
+})
 
 // === Initialize Express App ===
 const app = express()
+
+// === Proxy Trust Configuration ===
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', '127.0.0.1')
+} else {
+  app.set('trust proxy', false)
+  process.env.EXPRESS_RATE_LIMIT_TRUST_PROXY = 'false'
+}
 
 // === Core Middlewares ===
 app.use(express.json({ limit: '1mb' }))
@@ -23,12 +33,16 @@ app.use(requestLogger)
 logger.info('✅ FinanSaku backend starting...')
 
 // === CORS Configuration ===
-app.use(
-  cors({
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
-    credentials: true,
-  })
-)
+app.use(cors({
+  origin: [process.env.CLIENT_URL, 'http://localhost:5173'],
+  credentials: true,
+}))
+
+// Handle preflight
+app.options(/.*/, cors({
+  origin: [process.env.CLIENT_URL, 'http://localhost:5173'],
+  credentials: true,
+}))
 
 // === Rate Limiting ===
 app.use(globalRateLimiter)

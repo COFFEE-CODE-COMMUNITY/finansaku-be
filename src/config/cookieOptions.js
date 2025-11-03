@@ -2,8 +2,9 @@
 // Applied to all auth cookies (access + refresh)
 export const defaultCookieOptions = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+  secure: process.env.NODE_ENV === 'production', // must be true for HTTPS
+  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // cross-site enabled for prod
+  path: '/',
 }
 
 // === Cookie Durations (milliseconds) ===

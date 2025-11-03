@@ -5,7 +5,7 @@
   "description": "FinanSaku backend — Express + Prisma + PostgreSQL API with authentication, rate limiting, and testing setup.",
   "main": "src/server.js",
   "scripts": {
-    "start": "node src/server.js",
+    "start": "NODE_ENV=production node src/server.js",
     "dev": "nodemon src/server.js",
     "build": "node --enable-source-maps ./src/server.js",
     "lint": "eslint .",
