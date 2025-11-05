@@ -19,7 +19,6 @@ const sanitizeUser = (user) => {
   return safe
 }
 
-
 export const register = async (req, res) => {
   try {
     const { name, username, email, password } = req.body
