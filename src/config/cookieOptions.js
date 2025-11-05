@@ -2,12 +2,9 @@
 // Applied to all auth cookies (access + refresh)
 export const defaultCookieOptions = {
   httpOnly: true,
-  secure: false, // process.env.NODE_ENV === 'production', // must be true for HTTPS
-  sameSite: 'lax', //process.env.NODE_ENV === 'production' ? 'none' : 'lax', // cross-site enabled for prod
-  domain: undefined,
-    // process.env.NODE_ENV === 'production'
-    //   ? 'finansaku.space'
-    //   : 'localhost',
+  secure: true, //process.env.NODE_ENV === 'production', // must be true for HTTPS
+  sameSite: 'none', //process.env.NODE_ENV === 'production' ? 'none' : 'lax', // cross-site enabled for prod      
+  domain: 'finansaku.space', //process.env.NODE_ENV === 'production' ? 'finansaku.space' : undefined,
   path: '/',
 }
 

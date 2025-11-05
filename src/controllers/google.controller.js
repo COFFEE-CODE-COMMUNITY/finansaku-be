@@ -160,14 +160,27 @@ export const googleCallback = async (req, res) => {
 
     const { accessToken, refreshToken } = await issueTokens(user)
 
-    res.cookie('refreshToken', refreshToken, {
+    // Set cross-site compatible cookies
+    res.cookie('access_token', accessToken, {
       ...defaultCookieOptions,
       secure: isProduction,
       sameSite: isProduction ? 'none' : 'lax',
+      domain: isProduction ? new URL(config.apiBaseUrl).hostname.replace(/^api\./, '') : undefined,
+      maxAge: 60 * 60 * 1000, // 1h
+    })
+
+    res.cookie('refresh_token', refreshToken, {
+      ...defaultCookieOptions,
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
+      domain: isProduction ? new URL(config.apiBaseUrl).hostname.replace(/^api\./, '') : undefined,
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7d
     })
 
     log.info('[GOOGLE OAUTH] User logged in', { email: user.email })
-    return res.redirect(`${config.clientRedirectUrl}?token=${accessToken}`)
+
+    // Redirect back to frontend (configured via .env)
+    return res.redirect(`${config.clientRedirectUrl}/oauth-success`)
   } catch (err) {
     log.error('GOOGLE OAUTH ERROR', err)
     const status = err.statusCode || 500
