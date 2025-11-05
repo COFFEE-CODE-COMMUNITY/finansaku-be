@@ -39,6 +39,7 @@ export const googleRedirect = (req, res) => {
         response_type: 'code',
         scope: 'openid email profile',
         state,
+        prompt: 'consent select_account',
       }).toString()
 
     log.info('[GOOGLE OAUTH] Redirecting user', {
@@ -158,14 +159,18 @@ export const googleCallback = async (req, res) => {
       },
     })
 
-    const { accessToken, refreshToken } = await issueTokens(user)
+    const { accessToken, refreshToken } = await issueTokens(user.id, user.email)
 
     // Set cross-site compatible cookies
+    const baseDomain = isProduction
+      ? '.' + new URL(config.apiBaseUrl).hostname.replace(/^api\./, '')
+      : undefined
+
     res.cookie('access_token', accessToken, {
       ...defaultCookieOptions,
       secure: isProduction,
       sameSite: isProduction ? 'none' : 'lax',
-      domain: isProduction ? new URL(config.apiBaseUrl).hostname.replace(/^api\./, '') : undefined,
+      domain: baseDomain,
       maxAge: 60 * 60 * 1000, // 1h
     })
 
@@ -173,14 +178,14 @@ export const googleCallback = async (req, res) => {
       ...defaultCookieOptions,
       secure: isProduction,
       sameSite: isProduction ? 'none' : 'lax',
-      domain: isProduction ? new URL(config.apiBaseUrl).hostname.replace(/^api\./, '') : undefined,
+      domain: baseDomain,
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7d
     })
 
     log.info('[GOOGLE OAUTH] User logged in', { email: user.email })
 
     // Redirect back to frontend (configured via .env)
-    return res.redirect(`${config.clientRedirectUrl}/oauth-success`)
+    return res.redirect(`${config.clientRedirectUrl}`)
   } catch (err) {
     log.error('GOOGLE OAUTH ERROR', err)
     const status = err.statusCode || 500
