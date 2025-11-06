@@ -1,10 +1,10 @@
 import dotenv from 'dotenv'
 import crypto from 'node:crypto'
-import { execSync } from 'node:child_process'
-import fs from 'node:fs'
-import path from 'node:path'
-import { prisma } from '../src/lib/prisma.js'
-import config from '../src/config/index.js'
+import { prisma } from '../src/config/prisma.js'
+// import { execSync } from 'node:child_process'
+// import fs from 'node:fs'
+// import path from 'node:path'
+// import config from '../src/config/index.js'
 
 dotenv.config()
 
@@ -74,21 +74,21 @@ async function main() {
 
   console.log('✅ Seed complete!')
 
-  // --- Apply DB Constraints (optional) ---
-  const constraintsPath = path.resolve('./docs/db_constraints.sql')
-  if (fs.existsSync(constraintsPath)) {
-    try {
-      console.log('📜 Applying database constraints from db_constraints.sql...')
-      execSync(`psql "${config.DIRECT_URL}" -f "${constraintsPath}"`, {
-        stdio: 'inherit',
-      })
-      console.log('✅ Constraints applied successfully!')
-    } catch (err) { // eslint-disable-line no-unused-vars
-      console.warn('⚠️ Skipped applying constraints (psql not available or failed).')
-    }
-  } else {
-    console.warn('⚠️ No db_constraints.sql found, skipping constraint import.')
-  }
+  // // --- Apply DB Constraints (optional) ---
+  // const constraintsPath = path.resolve('./docs/db_constraints.sql')
+  // if (fs.existsSync(constraintsPath)) {
+  //   try {
+  //     console.log('📜 Applying database constraints from db_constraints.sql...')
+  //     execSync(`psql "${config.DIRECT_URL}" -f "${constraintsPath}"`, {
+  //       stdio: 'inherit',
+  //     })
+  //     console.log('✅ Constraints applied successfully!')
+  //   } catch (err) { // eslint-disable-line no-unused-vars
+  //     console.warn('⚠️ Skipped applying constraints (psql not available or failed).')
+  //   }
+  // } else {
+  //   console.warn('⚠️ No db_constraints.sql found, skipping constraint import.')
+  // }
 }
 
 // === Run Seeder ===
