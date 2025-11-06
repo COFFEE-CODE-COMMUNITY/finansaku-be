@@ -8,6 +8,6 @@
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true
   },
-  "include": ["src", "tests"],
+  "include": ["src", "tests", "__mocks__/adapters.mock.js"],
   "exclude": ["node_modules", "dist"]
 }

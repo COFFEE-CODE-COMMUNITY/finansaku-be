@@ -313,4 +313,3 @@ CHECK (percentage IS NULL OR (percentage >= 0 AND percentage <= 100));
 - UUIDs are default primary keys for all entities except `article`.
 - Foreign key indices are defined for all relation fields.
 - All timestamps use UTC by default.
-- `remember_token` is retained only for backward compatibility.
