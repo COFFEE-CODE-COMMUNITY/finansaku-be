@@ -7,23 +7,25 @@ import config from '../config/index.js'
 
 const log = createLogger('OAUTH')
 
-const GOOGLE_AUTH_URL = config.googleAuthUrl
-const GOOGLE_TOKEN_URL = config.googleTokenUrl
-const GOOGLE_USERINFO_URL = config.googleUserInfoUrl
+// === Google OAuth2 Config ===
+const GOOGLE_AUTH_URL = config.OAUTH2_ENDPOINT_GOOGLE
+const GOOGLE_TOKEN_URL = config.GOOGLE_TOKEN_URL
+const GOOGLE_USERINFO_URL = config.GOOGLE_USERINFO_URL
 
 const devStateStore = new Map()
 
+// === Step 1: Redirect user to Google OAuth ===
 export const googleRedirect = (req, res) => {
   try {
     const state = crypto.randomUUID()
-    const isProduction = config.nodeEnv === 'production'
+    const isProduction = config.NODE_ENV === 'production'
 
     if (isProduction) {
       res.cookie('oauth_state', state, {
         httpOnly: true,
         sameSite: 'lax',
         secure: true,
-        maxAge: 5 * 60 * 1000,
+        maxAge: 5 * 60 * 1000, // 5 minutes
       })
     } else {
       devStateStore.set(state, Date.now())
@@ -34,8 +36,8 @@ export const googleRedirect = (req, res) => {
       GOOGLE_AUTH_URL +
       '?' +
       new URLSearchParams({
-        client_id: config.googleClientId,
-        redirect_uri: config.googleRedirectUri,
+        client_id: config.GOOGLE_CLIENT_ID,
+        redirect_uri: config.GOOGLE_REDIRECT_URI,
         response_type: 'code',
         scope: 'openid email profile',
         state,
@@ -43,7 +45,7 @@ export const googleRedirect = (req, res) => {
       }).toString()
 
     log.info('[GOOGLE OAUTH] Redirecting user', {
-      env: config.nodeEnv,
+      env: config.NODE_ENV,
       usingCookie: isProduction,
       state,
     })
@@ -51,19 +53,20 @@ export const googleRedirect = (req, res) => {
     res.redirect(redirectUrl)
   } catch (err) {
     const status = err.statusCode || 500
-    res.status(status).json({ success: false, message: err.message || 'Failed to initialize Google OAuth redirect' })
+    res
+      .status(status)
+      .json({ success: false, message: err.message || 'Failed to initialize Google OAuth redirect' })
   }
 }
 
+// === Step 2: Handle Google callback ===
 export const googleCallback = async (req, res) => {
   try {
     const { state, code } = req.query
     const stateCookie = req.cookies.oauth_state
-    const isProduction = config.nodeEnv === 'production'
+    const isProduction = config.NODE_ENV === 'production'
 
-    const valid = isProduction
-      ? stateCookie && state === stateCookie
-      : devStateStore.has(state)
+    const valid = isProduction ? stateCookie && state === stateCookie : devStateStore.has(state)
 
     if (!valid)
       return res.status(400).json({ success: false, message: 'Invalid OAuth state' })
@@ -79,9 +82,9 @@ export const googleCallback = async (req, res) => {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
         code,
-        client_id: config.googleClientId,
-        client_secret: config.googleClientSecret,
-        redirect_uri: config.googleRedirectUri,
+        client_id: config.GOOGLE_CLIENT_ID,
+        client_secret: config.GOOGLE_CLIENT_SECRET,
+        redirect_uri: config.GOOGLE_REDIRECT_URI,
         grant_type: 'authorization_code',
       }),
     })
@@ -161,9 +164,8 @@ export const googleCallback = async (req, res) => {
 
     const { accessToken, refreshToken } = await issueTokens(user.id, user.email)
 
-    // Set cross-site compatible cookies
     const baseDomain = isProduction
-      ? '.' + new URL(config.apiBaseUrl).hostname.replace(/^api\./, '')
+      ? '.' + new URL(config.API_BASE_URL).hostname.replace(/^api\./, '')
       : undefined
 
     res.cookie('access_token', accessToken, {
@@ -171,7 +173,7 @@ export const googleCallback = async (req, res) => {
       secure: isProduction,
       sameSite: isProduction ? 'none' : 'lax',
       domain: baseDomain,
-      maxAge: 60 * 60 * 1000, // 1h
+      maxAge: 60 * 60 * 1000,
     })
 
     res.cookie('refresh_token', refreshToken, {
@@ -179,13 +181,13 @@ export const googleCallback = async (req, res) => {
       secure: isProduction,
       sameSite: isProduction ? 'none' : 'lax',
       domain: baseDomain,
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7d
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     })
 
     log.info('[GOOGLE OAUTH] User logged in', { email: user.email })
 
-    // Redirect back to frontend (configured via .env)
-    return res.redirect(`${config.clientRedirectUrl}`)
+    // Redirect back to frontend
+    return res.redirect(config.CLIENT_WEB_REDIRECT)
   } catch (err) {
     log.error('GOOGLE OAUTH ERROR', err)
     const status = err.statusCode || 500
