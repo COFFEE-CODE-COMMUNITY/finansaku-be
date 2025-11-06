@@ -6,6 +6,7 @@ import { sendEmailChangeConfirmation } from '../utils/mailer.js'
 import { success, fail } from '../utils/response.js'
 import { createLogger } from '../utils/scopedLogger.js'
 import * as authService from '../services/auth.service.js'
+import config from '../config/index.js'
 
 const log = createLogger('USER')
 
@@ -31,7 +32,7 @@ export const changeEmail = async (req, res) => {
     await redis.set(key, payload)
     await redis.expire(key, 60 * 60 * 24) // 24 hours
 
-    const confirmUrl = `${process.env.CLIENT_EMAIL_CHANGE_URL}?token=${token}`
+    const confirmUrl = `${config.CLIENT_EMAIL_CHANGE_URL}?token=${token}`
     await sendEmailChangeConfirmation(newEmail, user.name, confirmUrl)
 
     return success(res, 'Confirmation link sent to new email address', {

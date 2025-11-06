@@ -3,6 +3,7 @@ import crypto from 'node:crypto'
 import { prisma } from '../config/prisma.js'
 import { redis } from '../config/redis.js'
 import { sendEmailChangeConfirmation } from '../utils/mailer.js'
+import config from '../config/index.js'
 
 // === Update Password ===
 // Validates old password and saves a new hashed one
@@ -44,7 +45,7 @@ export const requestEmailChange = async (userId, name, newEmail) => {
   await redis.set(`emailchange:${token}`, JSON.stringify({ userId, newEmail }))
   await redis.expire(`emailchange:${token}`, 60 * 60 * 24) // 24 hours
 
-  const confirmUrl = `${process.env.CLIENT_EMAIL_CHANGE_URL}?token=${token}`
+  const confirmUrl = `${config.CLIENT_EMAIL_CHANGE_URL}?token=${token}`
   await sendEmailChangeConfirmation(newEmail, name, confirmUrl)
 
   return token

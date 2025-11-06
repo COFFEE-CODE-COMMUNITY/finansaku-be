@@ -2,10 +2,8 @@ import bcrypt from 'bcrypt'
 import { prisma } from '../config/prisma.js'
 import { issueTokens } from '../utils/jwt.js'
 import { generateToken, consumeToken } from '../utils/tokenCache.js'
-import {
-  sendVerificationEmail,
-  sendResetPasswordEmail,
-} from './mail.service.js'
+import { sendVerificationEmail, sendResetPasswordEmail } from './mail.service.js'
+import config from '../config/index.js'
 
 // === Register New User ===
 export async function registerUser({ name, username, email, password }) {
@@ -19,10 +17,10 @@ export async function registerUser({ name, username, email, password }) {
     include: { city: true, template: true },
   })
 
-  // ✅ Generate proper tokens
+  // Generate proper tokens
   const { accessToken, refreshToken } = issueTokens(user.id, user.email)
 
-  // ✅ Store refresh token as string (not object)
+  // Store refresh token as string (not object)
   await prisma.refreshToken.create({
     data: {
       userId: user.id,
@@ -67,7 +65,7 @@ export async function revokeTokens(userId) {
 // === Send Verification Email ===
 export async function sendEmailVerification(user) {
   const token = await generateToken('verify', user.id)
-  const verifyUrl = `${process.env.CLIENT_WEB_REDIRECT}/verify-email?token=${token}`
+  const verifyUrl = `${config.CLIENT_WEB_REDIRECT}/verify-email?token=${token}`
   await sendVerificationEmail(user.email, user.name, verifyUrl)
   return token
 }
@@ -89,7 +87,7 @@ export async function sendPasswordReset(email) {
   if (!user) throw new Error('Email not found')
 
   const token = await generateToken('reset', user.id)
-  const resetUrl = `${process.env.CLIENT_WEB_REDIRECT}/reset-password?token=${token}`
+  const resetUrl = `${config.CLIENT_WEB_REDIRECT}/reset-password?token=${token}`
   await sendResetPasswordEmail(user.email, user.name, resetUrl)
   return token
 }

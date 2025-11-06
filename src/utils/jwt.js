@@ -1,12 +1,13 @@
 import jwt from 'jsonwebtoken'
 import dotenv from 'dotenv'
+import config from '../config/index.js'
 dotenv.config()
 
 // === Token Configuration ===
-const accessSecret = process.env.ACCESS_TOKEN_SECRET || 'dev-access-secret'
-const refreshSecret = process.env.REFRESH_TOKEN_SECRET || 'dev-refresh-secret'
-const accessExpires = process.env.ACCESS_TOKEN_EXPIRES || '1h'
-const refreshExpires = process.env.REFRESH_TOKEN_EXPIRES || '7d'
+const accessSecret = config.ACCESS_TOKEN_SECRET || 'dev-access-secret'
+const refreshSecret = config.REFRESH_TOKEN_SECRET || 'dev-refresh-secret'
+const accessExpires = config.ACCESS_TOKEN_EXPIRES || '1h'
+const refreshExpires = config.REFRESH_TOKEN_EXPIRES || '7d'
 
 // === Issue Both Tokens ===
 // Generates an access and a refresh token

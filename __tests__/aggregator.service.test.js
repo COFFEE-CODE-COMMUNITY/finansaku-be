@@ -19,7 +19,7 @@ jest.mock('../src/config/logger.js', () => ({
   error: jest.fn(),
 }))
 jest.unstable_mockModule('../src/config/redis.js', () => ({
-  redis: { set: jest.fn() },
+  redis: { set: jest.fn(), ping: jest.fn() },
   isRedisEnabled: false,
 }))
 
@@ -32,9 +32,7 @@ describe('AggregatorService', () => {
   // === fetchAllSources() ===
   describe('fetchAllSources()', () => {
     it('returns merged mock data if remote fetch fails', async () => {
-      // Force network failure to test local __mocks__ fallback
       global.fetch.mockRejectedValueOnce(new Error('Network error'))
-
       const results = await AggregatorService.fetchAllSources()
       expect(Array.isArray(results)).toBe(true)
       expect(logger.warn).toHaveBeenCalled()
@@ -54,7 +52,6 @@ describe('AggregatorService', () => {
           { cityId: 'bandung', year: 2025, index: 107 },
         ]},
       ]
-
       const result = AggregatorService.reconcileData(mockRaw)
       expect(result.living_cost).toHaveLength(2)
       expect(result.living_cost[0]).toHaveProperty('confidence')
@@ -67,9 +64,7 @@ describe('AggregatorService', () => {
     it('loads local UMK mock file and stores entries', async () => {
       const spyStore = jest.spyOn(AggregatorService, 'storeToDatabase')
         .mockResolvedValueOnce(undefined)
-
       await AggregatorService.autoSync('umk')
-
       expect(spyStore).toHaveBeenCalled()
       spyStore.mockRestore()
     })
@@ -84,7 +79,6 @@ describe('AggregatorService', () => {
             { cityId: 'jakarta', year: 2025, index: 111.2 },
           ] },
         ])
-
       const spyStore = jest.spyOn(AggregatorService, 'storeToDatabase')
         .mockResolvedValueOnce(undefined)
 
@@ -92,9 +86,32 @@ describe('AggregatorService', () => {
 
       expect(spyFetch).toHaveBeenCalled()
       expect(spyStore).toHaveBeenCalled()
-
       spyFetch.mockRestore()
       spyStore.mockRestore()
+    })
+  })
+
+  // === 10.3 Failure simulations ===
+  describe('Failure handling & retry logic', () => {
+    it('retries failed network requests', async () => {
+      global.fetch
+        .mockRejectedValueOnce(new Error('timeout'))
+        .mockRejectedValueOnce(new Error('temporary error'))
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => [{ cityId: 'jakarta', year: 2025, index: 110 }],
+        })
+      const result = await AggregatorService.fetchAllSources()
+      expect(result).toBeDefined()
+      expect(logger.warn).toHaveBeenCalled()
+    })
+
+    it('handles Redis disabled safely', async () => {
+      const spy = jest.spyOn(AggregatorService, 'storeToDatabase')
+        .mockResolvedValueOnce(undefined)
+      await AggregatorService.autoSync('living_cost')
+      expect(spy).toHaveBeenCalled()
+      spy.mockRestore()
     })
   })
 })

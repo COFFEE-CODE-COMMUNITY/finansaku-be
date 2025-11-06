@@ -1,7 +1,7 @@
 ---
 aliases: [backend-setup]
 description: A guide for setting up the FinanSaku backend project locally.
-lastUpdated: 2025-10-21
+lastUpdated: 2025-11-06
 maintainer: FinanSaku Backend Team
 ---
 
@@ -13,12 +13,12 @@ This document provides a step-by-step guide for setting up the **FinanSaku backe
 
 ## 1. Requirements
 
-| Tool | Version | Notes |
-|------|----------|-------|
-| Node.js | ≥ 18.x | Use the LTS version for stability |
-| PostgreSQL | ≥ 14.x | Supabase is recommended for cloud hosting |
-| Prisma | Latest | ORM used for database access |
-| npm | ≥ 9.x | You may also use pnpm or yarn |
+| Tool       | Version | Notes                                   |
+|------------|---------|-----------------------------------------|
+| Node.js    | ≥ 18.x  | Use the LTS version for stability       |
+| PostgreSQL | ≥ 14.x  | Supabase is recommended for cloud host  |
+| Prisma     | Latest  | ORM used for database access            |
+| npm        | ≥ 9.x   | You may also use pnpm or yarn           |
 
 ---
 
@@ -30,7 +30,7 @@ Clone the repository and install dependencies:
 git clone https://github.com/COFFEE-CODE-COMMUNITY/finansaku-be.git
 cd finansaku-be
 npm install
-```
+````
 
 ---
 
@@ -47,8 +47,6 @@ Example `.env`:
 ```env
 # === Server Config ===
 PORT=3000
-
-# === App Environment ===
 NODE_ENV=development
 
 # === Database Config ===
@@ -61,10 +59,18 @@ REFRESH_TOKEN_SECRET="local-refresh-secret"
 ACCESS_TOKEN_EXPIRES=1h
 REFRESH_TOKEN_EXPIRES=7d
 
-# === Optional Services ===
-REDIS_HOST=localhost
+# === Redis (optional in local) ===
+ENABLE_REDIS=false
+REDIS_HOST=127.0.0.1
 REDIS_PORT=6379
 REDIS_PASSWORD=
+REDIS_URL=redis://127.0.0.1:6379
+
+# === Logging ===
+LOG_LEVEL=info
+LOG_PRETTY=true
+LOG_WITH_REQ_ID=true
+LOG_REDACT=password,authorization,access_token,refresh_token
 
 # === Google OAuth2 ===
 GOOGLE_CLIENT_ID=
@@ -109,6 +115,12 @@ The application will be available at:
 http://localhost:3000
 ```
 
+Health endpoint (for quick checks):
+
+```bash
+GET http://localhost:3000/api/v1/health
+```
+
 ---
 
 ## 6. Folder Structure
@@ -119,15 +131,22 @@ finansaku-be/
 │  ├─ schema.prisma
 │  └─ seed.js
 ├─ src/
+│  ├─ config/
+│  │  ├─ index.js
+│  │  ├─ logger.js
+│  │  └─ redis.js
 │  ├─ controllers/
 │  ├─ routes/
+│  │  └─ health.routes.js
 │  ├─ services/
 │  ├─ middlewares/
 │  ├─ dto/
 │  ├─ utils/
-│  └─ app.js
+│  ├─ app.js
+│  └─ server.js
 ├─ docs/
 │  ├─ backend-setup.md
+│  ├─ infrastructure.md
 │  ├─ auth.md
 │  ├─ commit-guide.md
 │  └─ contribution.md
@@ -143,4 +162,6 @@ finansaku-be/
 - Use feature branches (`feat/*`) for new development work.
 - Keep `main` clean; all merges should go through pull requests.
 - Always apply the latest migrations before testing or deploying changes.
+- Redis is optional for local dev; enable it with `ENABLE_REDIS=true` when needed.
 - Google OAuth2 setup requires valid redirect URIs and test users on Google Cloud.
+- Check `/api/v1/health` to verify uptime and Redis status.

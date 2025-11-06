@@ -1,9 +1,10 @@
 import winston from 'winston'
 import fs from 'fs'
 import path from 'path'
+import config from '../config/index.js'
 
 const { combine, timestamp, printf, colorize } = winston.format
-const logDir = process.env.LOG_DIR || 'logs'
+const logDir = config.LOG_DIR || 'logs'
 
 // === Ensure log directory exists ===
 if (!fs.existsSync(logDir)) {
@@ -17,7 +18,7 @@ const logFormat = printf(({ level, message, timestamp, stack }) => {
 
 // === Winston Logger Configuration ===
 const logger = winston.createLogger({
-  level: process.env.LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 'info' : 'debug'),
+  level: config.LOG_LEVEL || (config.NODE_ENV === 'production' ? 'info' : 'debug'),
   format: combine(
     colorize(),
     timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
@@ -36,7 +37,7 @@ const logger = winston.createLogger({
   ],
 })
 
-if (process.env.NODE_ENV !== 'production') {
+if (config.NODE_ENV !== 'production') {
   logger.debug('🪵 Winston logger initialized (development mode)')
 }
 
