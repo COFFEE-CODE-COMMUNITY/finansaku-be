@@ -1,21 +1,46 @@
+// === Load .env before any other imports ===
 import dotenv from 'dotenv'
-import app from './app.js'
 
-// === Load environment variables early ===
+// Determine env file manually
+const nodeEnv = process.env.NODE_ENV || 'production'
 dotenv.config({
-  path: process.env.NODE_ENV === 'production' ? '.env.production' : '.env'
+  path: nodeEnv === 'production' ? '.env.production' : '.env',
 })
-console.log('✅ Environment variables loaded')
+
+console.log(`✅ Environment variables loaded from ${nodeEnv === 'production' ? '.env.production' : '.env'}`)
+
+import app from './app.js'
+import { redis, isRedisEnabled } from './config/redis.js'
+import config from './config/index.js'
+import { registerAggregatorCron } from './jobs/aggregator.cron.js'
 
 // === Define release and environment ===
-const release =
-  process.env.npm_package_version ||
-  'development-build'
-
-const PORT = process.env.PORT || 8081
-const ENV = process.env.NODE_ENV || 'development'
+const release = config.npm_package_version || 'development-build'
+const PORT = config.PORT || 8081
+const ENV = config.NODE_ENV || 'development'
 
 console.log(`🚀 FinanSaku backend starting (release: ${release}, env: ${ENV})`)
+
+// === Redis Startup Probe ===
+async function startupProbe() {
+  if (!isRedisEnabled) {
+    console.log('ℹ️ Redis disabled — skipping startup probe')
+    return
+  }
+
+  try {
+    await redis.ping()
+    console.log('✅ Redis reachable at startup')
+  } catch (err) {
+    console.warn('⚠️ Redis not reachable at startup (continuing without cache)')
+    console.warn(err?.message || err)
+  }
+}
+
+await startupProbe()
+
+// === Register Cron Jobs ===
+registerAggregatorCron()
 
 // === Start server ===
 app.listen(PORT, () => {

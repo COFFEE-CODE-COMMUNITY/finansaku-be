@@ -1,4 +1,5 @@
 import logger from '../config/logger.js'
+import config from '../config/index.js'
 
 // === Global Error Handler Middleware ===
 // Catches any thrown error and formats a standardized response
@@ -17,7 +18,7 @@ export function errorHandler(err, req, res, next) {
   if (res.headersSent) return next(err)
 
   // Only include stack trace in non-production for safety
-  const isProduction = process.env.NODE_ENV === 'production'
+  const isProduction = config.NODE_ENV === 'production'
 
   res.status(statusCode).json({
     success: false,

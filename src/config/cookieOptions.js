@@ -1,12 +1,13 @@
+import config from '../config/index.js'
+
 // === Cookie Options ===
 // Applied to all auth cookies (access + refresh)
 export const defaultCookieOptions = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === 'production', // must be true for HTTPS
-  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // cross-site enabled for prod
-  domain: process.env.NODE_ENV === 'production' ? '.finansaku.space' : undefined,
+  secure: config.NODE_ENV === 'production', // must be true for HTTPS
+  sameSite: config.NODE_ENV === 'production' ? 'none' : 'lax', // cross-site enabled for prod
+  domain: config.NODE_ENV === 'production' ? '.finansaku.space' : undefined,
   path: '/',
-
 }
 
 // === Cookie Durations (milliseconds) ===

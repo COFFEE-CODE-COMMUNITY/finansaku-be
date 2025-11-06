@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken'
 import { prisma } from '../config/prisma.js'
+import config from '../config/index.js'
 
 // === Authentication Middleware ===
 // Verifies JWT from cookie or Authorization header
@@ -15,7 +16,7 @@ export const authenticate = async (req, res, next) => {
 
   try {
     // Verify the JWT token
-    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET)
+    const decoded = jwt.verify(token, config.ACCESS_TOKEN_SECRET)
 
     // Ensure payload structure is valid
     if (!decoded || typeof decoded !== 'object' || typeof decoded.userId !== 'string') {

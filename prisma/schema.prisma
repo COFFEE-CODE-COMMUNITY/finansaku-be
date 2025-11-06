@@ -13,6 +13,12 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+// generator erd {
+//   provider = "prisma-erd-generator"
+//   output = "../docs/db_erd.svg"
+// }
+
+// === Core User & Authentication ===
 model User {
   id                     String                  @id @default(uuid()) @map("id_user") @db.Uuid
   cityId                 String?                 @map("city_id") @db.Uuid
@@ -354,7 +360,7 @@ model LivingCost {
   id        String   @id @default(uuid()) @map("id_living_cost") @db.Uuid
   cityId    String   @map("city_id") @db.Uuid
   year      Int
-  index     Decimal  @db.Decimal(10, 2)
+  index     Decimal  @db.Decimal(12, 2)
   currency  String   @default("IDR") @db.VarChar(10)
   sourceUrl String?  @map("source_url")
   createdAt DateTime @default(now()) @map("created_at")

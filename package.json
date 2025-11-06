@@ -43,6 +43,7 @@
     "juice": "^11.0.3",
     "node-cron": "^4.2.1",
     "nodemailer": "^7.0.10",
+    "rate-limit-redis": "^4.2.3",
     "redis": "^5.8.3",
     "resend": "^6.4.0",
     "winston": "^3.18.3"

@@ -5,6 +5,7 @@ import path from "node:path"
 import handlebars from "handlebars"
 import layouts from "handlebars-layouts"
 import juice from "juice"
+import config from '../src/config/index.js'
 
 dotenv.config()
 
@@ -34,10 +35,10 @@ handlebars.registerPartial("base", baseLayout)
 layouts.register(handlebars)
 
 const transporter = nodemailer.createTransport({
-  host: process.env.MAIL_HOST || "smtp.gmail.com",
-  port: Number(process.env.MAIL_PORT) || 587,
+  host: config.MAIL_HOST || "smtp.gmail.com",
+  port: Number(config.MAIL_PORT) || 587,
   secure: false,
-  auth: { user: process.env.MAIL_USER, pass: process.env.MAIL_PASS },
+  auth: { user: config.MAIL_USER, pass: config.MAIL_PASS },
 })
 
 async function sendTemplateEmail(tplName) {
@@ -59,7 +60,7 @@ async function sendTemplateEmail(tplName) {
 
   try {
     const info = await transporter.sendMail({
-      from: `"FinanSaku Team" <${process.env.MAIL_FROM_EMAIL}>`,
+      from: `"FinanSaku Team" <${config.MAIL_FROM_EMAIL}>`,
       to: testEmail,
       subject: `FinanSaku Email Test ✅ (${tplName})`,
       html,

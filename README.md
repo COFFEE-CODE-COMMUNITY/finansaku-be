@@ -2,8 +2,7 @@
 
 > Status: Active Development (v0.1.0)
 
-Backend service for **FinanSaku**, a budgeting and UMK-based financial tracker
-app by **Coffee Code Community**.
+Backend service for **FinanSaku**, a budgeting and UMK-based financial tracker app by **Coffee Code Community**.
 
 ---
 
@@ -26,9 +25,10 @@ FinanSaku backend provides:
 - **Node.js** with **Express**
 - **Prisma ORM**
 - **PostgreSQL** (Supabase)
-- **Redis** for token and verification caching
+- **Redis** for token, caching, and rate-limit store (optional in local)
 - **JWT Authentication**
 - **Nodemailer** for email templates
+- **Pino** for structured logging
 - **PM2 + Nginx** for deployment (`api.finansaku.space`)
 
 ---
@@ -43,14 +43,15 @@ finansaku-be/
 │  ├─ controllers/      # Handles API logic
 │  ├─ services/         # Business logic
 │  ├─ middlewares/      # Auth / validation middleware
-│  ├─ models/           # (Optional) non-Prisma data models
-│  ├─ utils/            # Helpers / utilities
-│  └─ app.js            # Main server entry
+│  ├─ utils/            # Helpers / utilities (cache, token helpers)
+│  ├─ config/           # Env, logger (Pino), Redis client
+│  ├─ app.js            # Express app (middlewares + routes)
+│  └─ server.js         # HTTP server bootstrap (app.listen)
 ├─ .env.example         # Example environment variables
 ├─ package.json
 ├─ README.md
 └─ docs/                # Project documentation
-````
+```
 
 ---
 
@@ -100,25 +101,17 @@ Supabase PostgreSQL is used for remote production deployment.
 
 ### Example Workflow
 
-1. Create a new feature branch from `dev`
+```bash
+# Create a new feature branch from dev
+git checkout dev
+git pull origin dev
+git checkout -b feat/feature-name
 
-   ```bash
-   git checkout dev
-   git pull origin dev
-   git checkout -b feat/feature-name
-   ```
-
-2. Commit and push your changes
-
-   ```bash
-   git add .
-   git commit -m "feat: add Saku CRUD endpoints"
-   git push -u origin feat/feature-name
-   ```
-
-3. Open a Pull Request targeting `dev`
-
-4. After review and testing, merge `dev` → `main`
+# Commit and push your changes
+git add .
+git commit -m "feat: add Saku CRUD endpoints"
+git push -u origin feat/feature-name
+```
 
 ---
 
@@ -144,15 +137,27 @@ Refer to the [`/docs`](./docs) directory for full details:
 
 ## Monitoring & Logging
 
-The backend uses **Winston** for structured logging.
-Logs are stored under the `/logs` directory and automatically rotated per environment.
+The backend uses **Pino** for structured logging.
+
+- Dev: pretty, human-readable logs (`LOG_PRETTY=true`)
+- Prod: JSON logs to STDOUT (managed by **PM2**; rotated via **pm2-logrotate**)
+
+Key envs:
+
+```bash
+LOG_LEVEL=info
+LOG_PRETTY=true
+LOG_WITH_REQ_ID=true
+LOG_REDACT=password,authorization,access_token,refresh_token
+```
 
 ---
 
 ## Security & Rate Limiting
 
 Global and authentication-specific rate limiters are configured via **express-rate-limit**.
-Settings can be adjusted using the following `.env` variables:
+
+### Environment Variables
 
 ```bash
 RATE_LIMIT_GLOBAL=100
@@ -160,16 +165,19 @@ RATE_LIMIT_AUTH=10
 RATE_LIMIT_WINDOW_MS=60000
 ```
 
----
+### Optional Redis Persistence
 
-## Redis Integration
-
-Redis is used for caching and token/session handling.
-For local testing without a VM, the backend will log a warning instead of crashing.
-Make sure your `.env` includes:
+To enable distributed rate limiting and caching:
 
 ```bash
-REDIS
+ENABLE_REDIS=true
+REDIS_URL=redis://:password@127.0.0.1:6379
+```
+
+Health check endpoint:
+
+```bash
+GET /api/v1/health  # returns uptime + Redis status (healthy|unreachable|disabled)
 ```
 
 ---
