@@ -9,10 +9,10 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-generator erd {
-  provider = "prisma-erd-generator"
-  output = "../docs/db_erd.svg"
-}
+// generator erd {
+//   provider = "prisma-erd-generator"
+//   output = "../docs/db_erd.svg"
+// }
 
 // === Core User & Authentication ===
 model User {
