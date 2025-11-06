@@ -8,7 +8,7 @@ import { requestLogger } from './middlewares/requestLogger.js'
 import authRoutes from './routes/auth.routes.js'
 import systemRoutes from './routes/system.routes.js'
 import logger from './config/logger.js'
-import { redis, isRedisEnabled } from './config/redis.js' // eslint-disable-line no-unused-vars
+import { redis, isRedisEnabled } from './config/redis.js'
 import config from './config/index.js'
 
 // === Initialize Express App ===
