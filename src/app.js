@@ -5,7 +5,15 @@ import cookieParser from 'cookie-parser'
 import { errorHandler } from './middlewares/errorHandler.js'
 import { authRateLimiter, globalRateLimiter, ipBlocker } from './middlewares/rateLimiter.js'
 import { requestLogger } from './middlewares/requestLogger.js'
+import { authenticate } from './middlewares/auth.middleware.js'
 import authRoutes from './routes/auth.routes.js'
+import userRoutes from './routes/user.routes.js'
+import sakuRoutes from './routes/saku.routes.js'
+import umkRoutes from './routes/umk.routes.js'
+import notificationRoutes from './routes/notifications.routes.js'
+import dashboardRoutes from './routes/dashboard.routes.js'
+import historyRoutes from './routes/history.routes.js'
+import allocationRoutes from './routes/allocation.routes.js'
 import systemRoutes from './routes/system.routes.js'
 import logger from './config/logger.js'
 import { redis, isRedisEnabled } from './config/redis.js'
@@ -78,6 +86,13 @@ app.get('/api/v1/health', async (_req, res) => {
 
 // === API Routes ===
 app.use('/api/v1/auth', authRoutes)
+app.use('/api/v1/users', authenticate, userRoutes)
+app.use('/api/v1/saku', authenticate, sakuRoutes)
+app.use('/api/v1/umk', authenticate, umkRoutes)
+app.use('/api/v1/allocations', authenticate, allocationRoutes)
+app.use('/api/v1/notifications', authenticate, notificationRoutes)
+app.use('/api/v1/dashboard', authenticate, dashboardRoutes)
+app.use('/api/v1/history', authenticate, historyRoutes)
 app.use('/api/v1', systemRoutes) // aggregator + other system routes
 
 // === Global Error Handling ===
