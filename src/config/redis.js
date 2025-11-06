@@ -25,7 +25,7 @@ const client = createClient({
 // === Connection Events ===
 client.on('connect', () => logger.info('[Redis] Connecting...'))
 client.on('ready', () => logger.info('[Redis] Ready for commands ✅'))
-client.on('error', (err) => logger.error('[Redis] Connection error:', err))
+client.on('error', (err) => logger.error('[Redis] Connection error', err))
 client.on('end', () => logger.warn('[Redis] Connection closed ❌'))
 
 // === Safe Connection Wrapper ===
@@ -43,10 +43,10 @@ if (config.ENABLE_REDIS === 'true') {
   logger.info('[Redis] Connection skipped (ENABLE_REDIS=false)')
 }
 
-// === Export Redis Client for global usage ===
-export default client
+// === Exports ===
 export const redis = client
 export const isRedisEnabled = config.ENABLE_REDIS === 'true'
+export default client
 
 // === Optional: Health Probe (non-blocking) ===
 ;(async function probeRedis() {
@@ -57,6 +57,6 @@ export const isRedisEnabled = config.ENABLE_REDIS === 'true'
     await client.get(key)
     logger.info('✅ Redis probe OK')
   } catch (err) {
-    logger.warn({ err }, 'Redis probe failed (fallback to in-memory)')
+    logger.warn('[Redis] Probe failed, fallback to in-memory cache')
   }
 })()
