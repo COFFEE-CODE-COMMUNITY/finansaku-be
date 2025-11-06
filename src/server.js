@@ -1,14 +1,17 @@
+// === Load .env before any other imports ===
 import dotenv from 'dotenv'
 
-// === Load environment variables early ===
-const nodeEnv = process.env.NODE_ENV || 'development'
+// Determine env file manually
+const nodeEnv = process.env.NODE_ENV || 'production'
 dotenv.config({
   path: nodeEnv === 'production' ? '.env.production' : '.env',
 })
 
+console.log(`✅ Environment variables loaded from ${nodeEnv === 'production' ? '.env.production' : '.env'}`)
+
 import app from './app.js'
-import config from './config/index.js'
 import { redis, isRedisEnabled } from './config/redis.js'
+import config from './config/index.js'
 
 // === Define release and environment ===
 const release = config.npm_package_version || 'development-build'
