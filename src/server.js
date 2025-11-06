@@ -12,6 +12,7 @@ console.log(`✅ Environment variables loaded from ${nodeEnv === 'production' ? 
 import app from './app.js'
 import { redis, isRedisEnabled } from './config/redis.js'
 import config from './config/index.js'
+import { registerAggregatorCron } from './jobs/aggregator.cron.js'
 
 // === Define release and environment ===
 const release = config.npm_package_version || 'development-build'
@@ -37,6 +38,9 @@ async function startupProbe() {
 }
 
 await startupProbe()
+
+// === Register Cron Jobs ===
+registerAggregatorCron()
 
 // === Start server ===
 app.listen(PORT, () => {

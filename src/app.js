@@ -6,6 +6,7 @@ import { errorHandler } from './middlewares/errorHandler.js'
 import { authRateLimiter, globalRateLimiter, ipBlocker } from './middlewares/rateLimiter.js'
 import { requestLogger } from './middlewares/requestLogger.js'
 import authRoutes from './routes/auth.routes.js'
+import systemRoutes from './routes/system.routes.js'
 import logger from './config/logger.js'
 import { redis, isRedisEnabled } from './config/redis.js' // eslint-disable-line no-unused-vars
 import config from './config/index.js'
@@ -77,6 +78,7 @@ app.get('/api/v1/health', async (_req, res) => {
 
 // === API Routes ===
 app.use('/api/v1/auth', authRoutes)
+app.use('/api/v1', systemRoutes) // aggregator + other system routes
 
 // === Global Error Handling ===
 app.use(errorHandler)
