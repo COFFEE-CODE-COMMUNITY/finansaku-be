@@ -1,10 +1,11 @@
 import cron from 'node-cron'
 import logger from './logger.js'
 import { autoSync } from '../services/aggregator/aggregator.service.js'
+import config from '../../config/index.js'
 
 // === Cron Configuration ===
 // Default: run once a month (first day at 03:00)
-const cronExpr = process.env.AGGREGATOR_CRON_EXPRESSION || '0 3 1 * *'
+const cronExpr = config.AGGREGATOR_CRON_EXPRESSION || '0 3 1 * *'
 
 // === Register Aggregator Sync Job ===
 export const initCronJobs = () => {

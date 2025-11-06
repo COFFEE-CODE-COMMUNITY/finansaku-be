@@ -1,13 +1,14 @@
 import { createClient } from 'redis'
 import logger from './logger.js'
+import config from '../config/index.js'
 
-const redisHost = process.env.REDIS_HOST || '127.0.0.1'
-const redisPort = process.env.REDIS_PORT || 6379
-const redisPassword = process.env.REDIS_PASSWORD || ''
+const redisHost = config.REDIS_HOST || '127.0.0.1'
+const redisPort = config.REDIS_PORT || 6379
+const redisPassword = config.REDIS_PASSWORD || ''
 const redisUrl =
-  process.env.REDIS_URL || `redis://${redisPassword ? ':' + encodeURIComponent(redisPassword) + '@' : ''}${redisHost}:${redisPort}`
+  config.REDIS_URL || `redis://${redisPassword ? ':' + encodeURIComponent(redisPassword) + '@' : ''}${redisHost}:${redisPort}`
 
-logger.info(`[Redis] Connecting to: ${redisUrl} (ENABLE_REDIS=${process.env.ENABLE_REDIS})`)
+logger.info(`[Redis] Connecting to: ${redisUrl} (ENABLE_REDIS=${config.ENABLE_REDIS})`)
 
 const client = createClient({
   url: redisUrl,
@@ -23,7 +24,7 @@ client.on('end', () => logger.warn('[Redis] Connection closed'))
 
 // === Safe Connection Wrapper ===
 // Connect only when ENABLE_REDIS=true to prevent crash loops
-if (process.env.ENABLE_REDIS === 'true') {
+if (config.ENABLE_REDIS === 'true') {
   ;(async () => {
     try {
       await client.connect()
@@ -42,4 +43,4 @@ export default client
 
 // === Optional named export ===
 export const redis = client
-export const isRedisEnabled = process.env.ENABLE_REDIS === 'true'
+export const isRedisEnabled = config.ENABLE_REDIS === 'true'

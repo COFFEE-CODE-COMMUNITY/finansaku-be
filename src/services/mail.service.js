@@ -2,12 +2,13 @@ import nodemailer from 'nodemailer'
 import fs from 'fs'
 import path from 'path'
 import logger from '../config/logger.js'
+import config from '../config/index.js'
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
+    user: config.SMTP_USER,
+    pass: config.SMTP_PASS,
   },
 })
 
@@ -34,7 +35,7 @@ export async function sendVerificationEmail(to, name, verificationLink) {
     const html = renderTemplate('verify-email', { name, verificationLink })
 
     await transporter.sendMail({
-      from: `"FinanSaku Support" <${process.env.SMTP_USER}>`,
+      from: `"FinanSaku Support" <${config.SMTP_USER}>`,
       to,
       subject: 'Verify your FinanSaku account',
       html,
@@ -55,7 +56,7 @@ export async function sendResetPasswordEmail(to, name, resetLink) {
     const html = renderTemplate('reset-password', { name, resetLink })
 
     await transporter.sendMail({
-      from: `"FinanSaku Support" <${process.env.SMTP_USER}>`,
+      from: `"FinanSaku Support" <${config.SMTP_USER}>`,
       to,
       subject: 'Reset your FinanSaku password',
       html,

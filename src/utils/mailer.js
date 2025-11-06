@@ -6,6 +6,7 @@ import handlebars from 'handlebars'
 import layouts from 'handlebars-layouts'
 import juice from 'juice'
 import logger from '../config/logger.js'
+import config from '../config/index.js'
 
 // === Register base layout & helpers ===
 const baseLayout = fs.readFileSync(path.resolve('src/templates/base.html'), 'utf8')
@@ -28,8 +29,8 @@ const loadTemplate = (templateName, variables = {}) => {
 // === Choose mail transport (Resend or SMTP) ===
 let mailClient = null
 
-if (process.env.RESEND_API_KEY) {
-  const resend = new Resend(process.env.RESEND_API_KEY)
+if (config.RESEND_API_KEY) {
+  const resend = new Resend(config.RESEND_API_KEY)
   mailClient = {
     send: async ({ to, subject, html }) => {
       await resend.emails.send({
@@ -43,12 +44,12 @@ if (process.env.RESEND_API_KEY) {
   logger.info('📧 Using Resend mail service')
 } else {
   const transporter = nodemailer.createTransport({
-    host: process.env.MAIL_HOST || 'smtp.gmail.com',
-    port: Number(process.env.MAIL_PORT) || 587,
+    host: config.MAIL_HOST || 'smtp.gmail.com',
+    port: Number(config.MAIL_PORT) || 587,
     secure: false,
     auth: {
-      user: process.env.MAIL_USER,
-      pass: process.env.MAIL_PASS,
+      user: config.MAIL_USER,
+      pass: config.MAIL_PASS,
     },
   })
 

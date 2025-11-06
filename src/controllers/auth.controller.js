@@ -10,6 +10,7 @@ import * as authService from '../services/auth.service.js'
 import { defaultCookieOptions, cookieDurations } from '../config/cookieOptions.js'
 import { verifyToken, issueTokens } from '../utils/jwt.js'
 import { createLogger } from '../utils/scopedLogger.js'
+import config from '../config/index.js'
 
 const log = createLogger('AUTH')
 
@@ -32,17 +33,13 @@ export const register = async (req, res) => {
     const verifyKey = `verify:${token}`
     await redis.set(verifyKey, String(result.user.id))
     await redis.expire(verifyKey, 60 * 60 * 24)
-    const verifyUrl = `${process.env.CLIENT_VERIFY_URL}?token=${token}`
+    const verifyUrl = `${config.CLIENT_VERIFY_URL}?token=${token}`
     await sendVerificationEmail(email, name, verifyUrl)
-
-    const { accessToken, refreshToken } = issueTokens(result.user.id, result.user.email)
-    res.cookie('access_token', accessToken, { ...defaultCookieOptions, maxAge: cookieDurations.access })
-    res.cookie('refresh_token', refreshToken, { ...defaultCookieOptions, maxAge: cookieDurations.refresh })
 
     res.status(201).json({
       success: true,
       message: 'Account created successfully. Verification email sent.',
-      data: { user: safeUser, accessToken, refreshToken },
+      data: { user: safeUser },
     })
   } catch (err) {
     const status = err.statusCode || 400
@@ -163,7 +160,7 @@ export const resendVerification = async (req, res) => {
     const token = crypto.randomBytes(32).toString('hex')
     await redis.set(`verify:${token}`, String(user.id))
     await redis.expire(`verify:${token}`, 60 * 60 * 24)
-    const verifyUrl = `${process.env.CLIENT_VERIFY_URL}?token=${token}`
+    const verifyUrl = `${config.CLIENT_VERIFY_URL}?token=${token}`
     await sendVerificationEmail(email, user.name, verifyUrl)
 
     res.status(200).json({ success: true, message: 'Verification email resent successfully' })
@@ -182,7 +179,7 @@ export const forgotPassword = async (req, res) => {
     const token = crypto.randomBytes(32).toString('hex')
     await redis.set(`reset:${token}`, String(email))
     await redis.expire(`reset:${token}`, 60 * 30)
-    const resetUrl = `${process.env.CLIENT_RESET_URL}?token=${token}`
+    const resetUrl = `${config.CLIENT_RESET_URL}?token=${token}`
     await sendResetPasswordEmail(email, user.name, resetUrl)
 
     res.status(200).json({ success: true, message: 'Password reset email sent successfully' })

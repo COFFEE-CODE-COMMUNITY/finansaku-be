@@ -1,9 +1,10 @@
 import { prisma } from '../../config/prisma.js'
 import logger from '../../config/logger.js'
 import { redis, isRedisEnabled } from '../../config/redis.js'
+import config from '../../config/index.js'
 
 // === Environment Variables ===
-const BPS_API_KEY = process.env.BPS_API_KEY || ''
+const BPS_API_KEY = config.BPS_API_KEY || ''
 const CURRENT_YEAR = new Date().getFullYear()
 
 // === Data Sources ===

@@ -8,17 +8,16 @@ import { requestLogger } from './middlewares/requestLogger.js'
 import authRoutes from './routes/auth.routes.js'
 import logger from './config/logger.js'
 import { redis } from './config/redis.js' // eslint-disable-line no-unused-vars
+import config from './config/index.js'
 
 // === Initialize Express App ===
 const app = express()
 
 // === Proxy Trust Configuration ===
-if (process.env.NODE_ENV === 'production') {
-  app.set('trust proxy', '127.0.0.1')
-} else {
-  app.set('trust proxy', false)
-  process.env.EXPRESS_RATE_LIMIT_TRUST_PROXY = 'false'
+if (config.NODE_ENV === 'production') {
+  app.set('trust proxy', 1) // trust first proxy (Nginx)
 }
+
 
 // === Core Middlewares ===
 app.use(express.json({ limit: '1mb' }))

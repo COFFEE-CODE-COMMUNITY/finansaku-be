@@ -4,6 +4,7 @@ import { execSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import { prisma } from '../src/lib/prisma.js'
+import config from '../src/config/index.js'
 
 dotenv.config()
 
@@ -78,7 +79,7 @@ async function main() {
   if (fs.existsSync(constraintsPath)) {
     try {
       console.log('📜 Applying database constraints from db_constraints.sql...')
-      execSync(`psql "${process.env.DIRECT_URL}" -f "${constraintsPath}"`, {
+      execSync(`psql "${config.DIRECT_URL}" -f "${constraintsPath}"`, {
         stdio: 'inherit',
       })
       console.log('✅ Constraints applied successfully!')

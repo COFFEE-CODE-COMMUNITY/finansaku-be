@@ -2,14 +2,15 @@ import nodemailer from 'nodemailer'
 import fs from 'fs'
 import path from 'path'
 import logger from '../config/logger.js'
+import config from '../config/index.js'
 
 // === Initialize Transporter ===
 // Use Gmail (App Password required) or custom SMTP (e.g. Resend, Mailtrap)
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
+    user: config.SMTP_USER,
+    pass: config.SMTP_PASS,
   },
 })
 
@@ -31,7 +32,7 @@ function renderTemplate(templateName, variables) {
 async function sendEmail({ to, subject, html }) {
   try {
     const info = await transporter.sendMail({
-      from: `"FinanSaku Support" <${process.env.SMTP_USER}>`,
+      from: `"FinanSaku Support" <${config.SMTP_USER}>`,
       to,
       subject,
       html,
