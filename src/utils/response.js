@@ -13,3 +13,6 @@ export const fail = (res, message = 'Error', status = 400, errors = null) => {
     errors,
   })
 }
+
+// ⬇️ alias supaya import { ok, fail } tetap jalan
+export const ok = success

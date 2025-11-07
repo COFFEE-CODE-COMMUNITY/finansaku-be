@@ -16,6 +16,7 @@ import historyRoutes from './routes/history.routes.js'
 import allocationRoutes from './routes/allocation.routes.js'
 import systemRoutes from './routes/system.routes.js'
 import logger from './config/logger.js'
+import surveyRoutes from './routes/survey.routes.js'
 import { redis, isRedisEnabled } from './config/redis.js'
 import config from './config/index.js'
 
@@ -94,6 +95,7 @@ app.use('/api/v1/notifications', authenticate, notificationRoutes)
 app.use('/api/v1/dashboard', authenticate, dashboardRoutes)
 app.use('/api/v1/history', authenticate, historyRoutes)
 app.use('/api/v1', systemRoutes) // aggregator + other system routes
+app.use('/api/v1/survey', surveyRoutes)
 
 // === Global Error Handling ===
 app.use(errorHandler)
