@@ -7,8 +7,11 @@ import config from '../config/index.js'
 
 // === Register New User ===
 export async function registerUser({ name, username, email, password }) {
-  const existing = await prisma.user.findUnique({ where: { email } })
-  if (existing) throw new Error('Email already registered')
+  // Check for existing email or username
+  const existing = await prisma.user.findFirst({
+    where: { OR: [{ email }, { username }] },
+  })
+  if (existing) throw new Error('Email or username already registered')
 
   const hashedPassword = await bcrypt.hash(password, 10)
 
@@ -17,16 +20,27 @@ export async function registerUser({ name, username, email, password }) {
     include: { city: true, template: true },
   })
 
-  // Generate proper tokens
   const { accessToken, refreshToken } = issueTokens(user.id, user.email)
 
-  // Store refresh token as string (not object)
+  // === Ensure refresh token uniqueness ===
   await prisma.refreshToken.create({
     data: {
       userId: user.id,
       token: refreshToken,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+      revoked: false,
     },
+  }).catch(async () => {
+    // fallback: cleanup and retry
+    await prisma.refreshToken.deleteMany({ where: { token: refreshToken } })
+    await prisma.refreshToken.create({
+      data: {
+        userId: user.id,
+        token: refreshToken,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        revoked: false,
+      },
+    })
   })
 
   return { user, accessToken, refreshToken }
@@ -42,11 +56,15 @@ export async function loginUser({ email, password }) {
 
   const { accessToken, refreshToken } = issueTokens(user.id, user.email)
 
+  // Delete previous refresh tokens for this user (keep latest only)
+  await prisma.refreshToken.deleteMany({ where: { userId: user.id } })
+
   await prisma.refreshToken.create({
     data: {
       userId: user.id,
       token: refreshToken,
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      revoked: false,
     },
   })
 
