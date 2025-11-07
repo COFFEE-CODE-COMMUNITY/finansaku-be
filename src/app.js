@@ -1,4 +1,4 @@
-import express from 'express'
+import express from 'express' 
 import cors from 'cors'
 import cookieParser from 'cookie-parser'
 
@@ -6,6 +6,7 @@ import { errorHandler } from './middlewares/errorHandler.js'
 import { authRateLimiter, globalRateLimiter, ipBlocker } from './middlewares/rateLimiter.js'
 import { requestLogger } from './middlewares/requestLogger.js'
 import { authenticate } from './middlewares/auth.middleware.js'
+
 import authRoutes from './routes/auth.routes.js'
 import userRoutes from './routes/user.routes.js'
 import sakuRoutes from './routes/saku.routes.js'
@@ -15,17 +16,18 @@ import dashboardRoutes from './routes/dashboard.routes.js'
 import historyRoutes from './routes/history.routes.js'
 import allocationRoutes from './routes/allocation.routes.js'
 import systemRoutes from './routes/system.routes.js'
+
 import logger from './config/logger.js'
 import { redis, isRedisEnabled } from './config/redis.js'
 import config from './config/index.js'
+import { registerAggregatorCron } from './jobs/aggregator.cron.js'
+import './config/prisma.js' // ✅ import for side-effect (ensures Prisma connection)
 
 // === Initialize Express App ===
 const app = express()
 
 // === Proxy Trust Configuration ===
-if (config.NODE_ENV === 'production') {
-  app.set('trust proxy', 1) // trust first proxy (Nginx)
-}
+if (config.NODE_ENV === 'production') app.set('trust proxy', 1)
 
 // === Core Middlewares ===
 app.use(express.json({ limit: '1mb' }))
@@ -44,11 +46,8 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true)
-      } else {
-        callback(new Error(`Not allowed by CORS: ${origin}`))
-      }
+      if (!origin || allowedOrigins.includes(origin)) callback(null, true)
+      else callback(new Error(`Not allowed by CORS: ${origin}`))
     },
     credentials: true,
   })
@@ -61,9 +60,7 @@ app.use(globalRateLimiter)
 app.use('/api/v1/auth/login', authRateLimiter)
 
 // === Health Check Routes ===
-app.get('/', (_req, res) => {
-  res.json({ message: 'FinanSaku API is running' })
-})
+app.get('/', (_req, res) => res.json({ message: 'FinanSaku API is running' }))
 
 app.get('/api/v1/health', async (_req, res) => {
   let redisStatus = 'disabled'
@@ -93,7 +90,10 @@ app.use('/api/v1/allocations', authenticate, allocationRoutes)
 app.use('/api/v1/notifications', authenticate, notificationRoutes)
 app.use('/api/v1/dashboard', authenticate, dashboardRoutes)
 app.use('/api/v1/history', authenticate, historyRoutes)
-app.use('/api/v1', systemRoutes) // aggregator + other system routes
+app.use('/api/v1', systemRoutes)
+
+// === Cron Job Registration (after Prisma is ready) ===
+registerAggregatorCron()
 
 // === Global Error Handling ===
 app.use(errorHandler)

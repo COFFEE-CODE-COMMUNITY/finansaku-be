@@ -31,10 +31,10 @@ const config = {
   REFRESH_TOKEN_EXPIRES: process.env.REFRESH_TOKEN_EXPIRES,
 
   // === Redis ===
-  ENABLE_REDIS: process.env.ENABLE_REDIS,
+  ENABLE_REDIS: process.env.ENABLE_REDIS === 'true',
   REDIS_URL: process.env.REDIS_URL,
   REDIS_HOST: process.env.REDIS_HOST,
-  REDIS_PORT: process.env.REDIS_PORT,
+  REDIS_PORT: Number(process.env.REDIS_PORT) || 6379,
   REDIS_PASSWORD: process.env.REDIS_PASSWORD,
 
   // === Google OAuth2 ===
@@ -53,7 +53,7 @@ const config = {
 
   // === Email ===
   MAIL_HOST: process.env.MAIL_HOST,
-  MAIL_PORT: process.env.MAIL_PORT,
+  MAIL_PORT: Number(process.env.MAIL_PORT) || 587,
   MAIL_USER: process.env.MAIL_USER,
   MAIL_PASS: process.env.MAIL_PASS,
   MAIL_FROM_NAME: process.env.MAIL_FROM_NAME,
@@ -62,6 +62,28 @@ const config = {
   // === Logging ===
   LOG_LEVEL: process.env.LOG_LEVEL || 'info',
   LOG_DIR: process.env.LOG_DIR || 'logs',
+
+  // === Aggregator ===
+  AGGREGATOR_ENABLE_CRON:
+    process.env.AGGREGATOR_ENABLE_CRON === 'true',
+  AGGREGATOR_CRON_EXPRESSION:
+    process.env.AGGREGATOR_CRON_EXPRESSION || '0 3 1 * *',
+  AGGREGATOR_HTTP_TIMEOUT_MS:
+    Number(process.env.AGGREGATOR_HTTP_TIMEOUT_MS) || 8000,
+  AGGREGATOR_MAX_RETRIES:
+    Number(process.env.AGGREGATOR_MAX_RETRIES) || 3,
+  AGGREGATOR_BACKOFF_BASE_MS:
+    Number(process.env.AGGREGATOR_BACKOFF_BASE_MS) || 500,
+  AGGREGATOR_CACHE_TTL_S:
+    Number(process.env.AGGREGATOR_CACHE_TTL_S) || 86400,
+  AGGREGATOR_CONFIRM_TTL_S:
+    Number(process.env.AGGREGATOR_CONFIRM_TTL_S) || 604800,
+  AGGREGATOR_SOURCE_WEIGHTS:
+    process.env.AGGREGATOR_SOURCE_WEIGHTS
+      ? JSON.parse(process.env.AGGREGATOR_SOURCE_WEIGHTS)
+      : { kemnaker: 0.6, bps: 0.3, kaggle: 0.1 },
+  AGGREGATOR_SOURCES: process.env.AGGREGATOR_SOURCES,
+  BPS_API_KEY: process.env.BPS_API_KEY,
 }
 
 export default config
