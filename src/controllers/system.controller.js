@@ -1,5 +1,5 @@
 import { autoSync } from '../services/aggregator/aggregator.service.js'
-import { delCache } from '../services/aggregator/utils/cache.js'
+import { delCache } from '../utils/cache.js'
 import logger from '../config/logger.js'
 
 export const SystemController = {

@@ -2,7 +2,17 @@ import { prisma } from '../../config/prisma.js'
 import logger from '../../config/logger.js'
 import { redis, isRedisEnabled } from '../../config/redis.js'
 import config from '../../config/index.js'
-import { delCache, bumpVersion } from './utils/cache.js'
+import {
+  delCache,
+  bumpVersion,
+  getCache,
+  setCache,
+  keySource,
+  keyCombined,
+  keyVersion,
+} from '../../utils/cache.js'
+import { parse } from 'csv-parse/sync'
+import fs from 'node:fs'
 
 // === Environment Variables ===
 const BPS_API_KEY = config.BPS_API_KEY || ''
@@ -155,30 +165,69 @@ function reconcileData(rawResults = []) {
   }
 }
 
-// === Fetch data from remote + __mocks__ fallback ===
+// === Fetch data from remote + cache + __mocks__ fallback ===
 export async function fetchAllSources() {
   const results = []
+
   for (const src of SOURCES) {
+    const srcKey = keySource(src.type, CURRENT_YEAR, src.name)
     try {
       logger.info(`[Aggregator] Fetching ${src.type} from ${src.name}`)
-      const data = await safeFetch(src.url)
-      results.push({ source: src.name, type: src.type, data })
+      const raw = await safeFetch(src.url)
+
+      // normalize remote JSON (handles both array and { data: [...] } shapes)
+      const normalized =
+        src.type === 'living_cost'
+          ? normalizeLivingCostData(src.name, Array.isArray(raw?.data) ? raw.data : raw)
+          : normalizeUMKData(src.name, Array.isArray(raw?.data) ? raw.data : raw)
+
+      if (isRedisEnabled && redis?.isReady) {
+        await setCache(srcKey, normalized, 86400) // per-source TTL: 1 day
+        await redis.incr(keyVersion(src.type)) // track version per type
+      }
+
+      results.push({ source: src.name, type: src.type, data: normalized })
     } catch (err) {
       logger.warn(`[Aggregator] Failed ${src.name}: ${err.message}`)
+
+      // === Try per-source cached data ===
+      if (isRedisEnabled && redis?.isReady) {
+        const cached = await getCache(srcKey)
+        if (cached) {
+          logger.info(`[Aggregator] Using cached ${src.name} due to failure`)
+          results.push({ source: `${src.name} (cache)`, type: src.type, data: cached })
+          continue
+        }
+      } else {
+        logger.warn('[Aggregator] Redis disabled, skipping cache fallback')
+      }
+
+      // === Fallback to local mock JSON ===
       try {
-        const mock = await import(`../__mocks__/${src.name}.json`, {
-          assert: { type: 'json' },
-        })
-        results.push({
-          source: `${src.name} (mock)`,
-          type: src.type,
-          data: mock.default,
-        })
+        const mock = await import(`../__mocks__/${src.name}.json`, { assert: { type: 'json' } })
+        const normalized =
+          src.type === 'living_cost'
+            ? normalizeLivingCostData(src.name, mock.default)
+            : normalizeUMKData(src.name, mock.default)
+        results.push({ source: `${src.name} (mock)`, type: src.type, data: normalized })
       } catch {
-        logger.warn(`[Aggregator] No mock fallback for ${src.name}`)
+        // === Fallback to local CSV if exists ===
+        try {
+          const csvPath = new URL(`../__mocks__/${src.name}.csv`, import.meta.url)
+          const csvRaw = fs.readFileSync(csvPath, 'utf-8')
+          const parsed = parse(csvRaw, { columns: true, skip_empty_lines: true })
+          const normalized =
+            src.type === 'living_cost'
+              ? normalizeLivingCostData(src.name, parsed)
+              : normalizeUMKData(src.name, parsed)
+          results.push({ source: `${src.name} (csv)`, type: src.type, data: normalized })
+        } catch {
+          logger.warn(`[Aggregator] No mock or CSV fallback for ${src.name}`)
+        }
       }
     }
   }
+
   return results
 }
 
@@ -235,39 +284,64 @@ export async function storeToDatabase(entries = [], type = 'umk') {
 export async function autoSync(type = 'living_cost') {
   logger.info(`🔁 [Aggregator] Starting autoSync for ${type}...`)
 
+  if (!isRedisEnabled) logger.info('[Aggregator] Redis disabled — stateless mode')
+
+  // === Try cache first ===
+  const cacheKey = keyCombined(type, CURRENT_YEAR)
+  if (isRedisEnabled && redis?.isReady) {
+    const cached = await getCache(cacheKey)
+    if (cached) {
+      logger.info(`[Aggregator] Using cached ${type} data for ${CURRENT_YEAR}`)
+      return cached
+    }
+  }
+
   let rawResults = []
   if (type === 'umk') {
     try {
-      const mock = await import(`../__mocks__/umk_${CURRENT_YEAR}.json`, {
-        assert: { type: 'json' },
-      })
-      rawResults = [
-        { source: 'kemnaker_manual', type: 'umk', data: mock.default },
-      ]
+      const mock = await import(`../__mocks__/umk_${CURRENT_YEAR}.json`, { assert: { type: 'json' } })
+      rawResults = [{ source: 'kemnaker_manual', type: 'umk', data: mock.default }]
     } catch {
       logger.warn(`[Aggregator] No UMK dataset found for year ${CURRENT_YEAR}`)
       return
     }
   } else {
-    rawResults = await fetchAllSources()
+    try {
+      rawResults = await fetchAllSources()
+    } catch {
+      logger.warn(`[Aggregator] Fetch failed, attempting cached fallback`)
+      const cached = await getCache(cacheKey)
+      if (cached) return cached
+      return
+    }
   }
 
   const { umk, living_cost } = reconcileData(rawResults)
-  if (type === 'umk' && umk.length) await storeToDatabase(umk, 'umk')
-  if (type === 'living_cost' && living_cost.length)
-    await storeToDatabase(living_cost, 'living_cost')
+  const result = type === 'umk' ? umk : living_cost
 
-  // === Cache invalidation + version bump ===
+  if (result.length) await storeToDatabase(result, type)
+
+  // === Cache write & invalidate old ===
   if (isRedisEnabled && redis?.isReady) {
     try {
-      await delCache(`aggregator:${type}:${CURRENT_YEAR}:*`)
+      await delCache(`aggregator:${type}:${CURRENT_YEAR}:src:*`)
+      await delCache(`aggregator:${type}:${CURRENT_YEAR}:combined`)
+      await setCache(cacheKey, result, 86400 * 30)
+      await redis.incr(keyVersion(type))
       await bumpVersion(type)
-      await redis.set('aggregator:last_sync', new Date().toISOString())
-      logger.info(`[Aggregator] Cache invalidated & version bumped for ${type}`)
+      await redis.hSet('aggregator:last_sync', {
+        [type]: new Date().toISOString(),
+        [`${type}_version`]: await redis.get(keyVersion(type)),
+      })
+      logger.info(`[Aggregator] Cache updated & version bumped for ${type}`)
     } catch (e) {
       logger.warn(`[Aggregator] Could not update Redis cache: ${e.message}`)
     }
   }
 
   logger.info(`✅ [Aggregator] ${type} sync complete`)
+  return result
 }
+
+// === Exportable for testing ===
+export { reconcileData }

@@ -1,4 +1,6 @@
-const DEFAULT_WEIGHTS = JSON.parse(process.env.AGGREGATOR_SOURCE_WEIGHTS || '{"kemnaker":0.6,"bps":0.3,"kaggle":0.1}')
+import config from '../../../config/index.js'
+
+const DEFAULT_WEIGHTS = JSON.parse(config.AGGREGATOR_SOURCE_WEIGHTS || '{"kemnaker":0.6,"bps":0.3,"kaggle":0.1}')
 
 function madFilter(values) {
   if (values.length < 3) return values
