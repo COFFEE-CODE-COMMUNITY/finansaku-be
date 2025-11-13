@@ -11,15 +11,14 @@ import {
   keyCombined,
   keyVersion,
 } from '../../utils/cache.js'
-import { parse } from 'csv-parse/sync'
-import fs from 'node:fs'
+import crypto from 'node:crypto' // Import crypto
 
 // === Environment Variables ===
 const BPS_API_KEY = config.BPS_API_KEY || ''
 const CURRENT_YEAR = new Date().getFullYear()
 
 // === Data Sources ===
-// UMK (manual-only): admin uploads Kemnaker/BPS JSON into __mocks__/umk_YYYY.json
+// UMK (manual-only): admin uploads Kemnaker/BPS JSON into ./__mocks__/umk_YYYY.json
 // Living-cost: automatic BPS + fallback Kaggle (CSV/JSON)
 const DEFAULT_SOURCES = [
   {
@@ -71,7 +70,8 @@ function normalizeUMKData(source, raw) {
       if (!cityId && !cityName) return null
       if (!amount || !Number.isFinite(amount)) return null
       return {
-        cityId: String(cityId || cityName).trim(),
+        // Use city name as the ID for reconciliation
+        cityId: String(cityName || cityId).trim(),
         year,
         amount,
         source,
@@ -85,13 +85,16 @@ function normalizeLivingCostData(source, raw) {
   return raw
     .map((item) => {
       const cityId = item.cityId || item.city_name || item.kota || item.id
+      const cityName = item.cityName || item.nama_kota || item.kabupaten_kota
       const year = Number(item.year || item.tahun || CURRENT_YEAR)
       const index = Number(item.index || item.value || item.ihk)
       const currency = item.currency || 'IDR'
       const sourceUrl = item.sourceUrl || item.url || null
-      if (!cityId || !index || !Number.isFinite(index)) return null
+      if (!cityId && !cityName) return null
+      if (!index || !Number.isFinite(index)) return null
       return {
-        cityId,
+        // Use city name as the ID for reconciliation
+        cityId: String(cityName || cityId).trim(),
         year,
         index,
         currency,
@@ -115,7 +118,7 @@ function reconcileData(rawResults = []) {
     const target = type === 'living_cost' ? buckets.living_cost : buckets.umk
 
     for (const entry of normalized) {
-      const key = `${entry.cityId}-${entry.year}`
+      const key = `${entry.cityId.toLowerCase()}-${entry.year}`
       if (!target.has(key)) {
         target.set(key, {
           ...entry,
@@ -204,26 +207,16 @@ export async function fetchAllSources() {
 
       // === Fallback to local mock JSON ===
       try {
-        const mock = await import(`../__mocks__/${src.name}.json`, { assert: { type: 'json' } })
+        // ✅ FIX: Corrected path from ../__mocks__ to ./__mocks__
+        const mock = await import(`./__mocks__/${src.name}.json`, { assert: { type: 'json' } })
         const normalized =
           src.type === 'living_cost'
             ? normalizeLivingCostData(src.name, mock.default)
             : normalizeUMKData(src.name, mock.default)
         results.push({ source: `${src.name} (mock)`, type: src.type, data: normalized })
-      } catch {
-        // === Fallback to local CSV if exists ===
-        try {
-          const csvPath = new URL(`../__mocks__/${src.name}.csv`, import.meta.url)
-          const csvRaw = fs.readFileSync(csvPath, 'utf-8')
-          const parsed = parse(csvRaw, { columns: true, skip_empty_lines: true })
-          const normalized =
-            src.type === 'living_cost'
-              ? normalizeLivingCostData(src.name, parsed)
-              : normalizeUMKData(src.name, parsed)
-          results.push({ source: `${src.name} (csv)`, type: src.type, data: normalized })
-        } catch {
-          logger.warn(`[Aggregator] No mock or CSV fallback for ${src.name}`)
-        }
+      } catch (e) {
+        // Removed CSV fallback logic
+        logger.warn(`[Aggregator] No mock JSON fallback for ${src.name}: ${e.message}`)
       }
     }
   }
@@ -235,26 +228,43 @@ export async function fetchAllSources() {
 export async function storeToDatabase(entries = [], type = 'umk') {
   for (const item of entries) {
     try {
+      // ✅ FIX: Resolve city name (e.g., "Jakarta") to city UUID
+      let cityId = item.cityId
+      if (!cityId.includes('-')) { // Simple check if it's a name, not UUID
+        const city = await prisma.city.findFirst({
+          where: { name: { equals: cityId, mode: 'insensitive' } }
+        })
+        
+        if (city) {
+          cityId = city.id // Replace name with UUID
+        } else {
+          logger.warn(`[Aggregator] Skipping entry: Could not find city ID for name "${item.cityId}"`)
+          continue // Skip this record
+        }
+      }
+
       if (type === 'umk') {
         await prisma.uMK.upsert({
-          where: { cityId_year: { cityId: item.cityId, year: item.year } },
+          where: { cityId_year: { cityId: cityId, year: item.year } },
           update: { amount: item.amount },
           create: {
-            cityId: item.cityId,
+            id: crypto.randomUUID(), // Add UUID
+            cityId: cityId,
             year: item.year,
             amount: item.amount,
           },
         })
       } else if (type === 'living_cost') {
         await prisma.livingCost.upsert({
-          where: { cityId_year: { cityId: item.cityId, year: item.year } },
+          where: { cityId_year: { cityId: cityId, year: item.year } },
           update: {
             index: item.index,
             currency: item.currency ?? 'IDR',
             sourceUrl: item.sourceUrl || null,
           },
           create: {
-            cityId: item.cityId,
+            id: crypto.randomUUID(), // Add UUID
+            cityId: cityId,
             year: item.year,
             index: item.index,
             currency: item.currency ?? 'IDR',
@@ -265,17 +275,18 @@ export async function storeToDatabase(entries = [], type = 'umk') {
 
       await prisma.aggregatorLog.create({
         data: {
-          cityId: item.cityId,
+          id: crypto.randomUUID(), // Add UUID
+          cityId: cityId,
           year: item.year,
           type,
           chosenSource: item.source,
           confidence: item.confidence ?? 100,
           status: 'success',
-          message: `Stored ${type} for ${item.cityId} (${item.year})`,
+          message: `Stored ${type} for ${cityId} (${item.year})`,
         },
       })
     } catch (err) {
-      logger.error(`[Aggregator] Failed storing ${type}: ${err.message}`)
+      logger.error(`[Aggregator] Failed storing ${type} (City: ${item.cityId}): ${err.message}`)
     }
   }
 }
@@ -299,39 +310,47 @@ export async function autoSync(type = 'living_cost') {
   let rawResults = []
   if (type === 'umk') {
     try {
-      const mock = await import(`../__mocks__/umk_${CURRENT_YEAR}.json`, { assert: { type: 'json' } })
+      // ✅ FIX: Corrected path from ../__mocks__ to ./__mocks__
+      const mock = await import(`./__mocks__/umk_${CURRENT_YEAR}.json`, { assert: { type: 'json' } })
       rawResults = [{ source: 'kemnaker_manual', type: 'umk', data: mock.default }]
-    } catch {
-      logger.warn(`[Aggregator] No UMK dataset found for year ${CURRENT_YEAR}`)
-      return
+    } catch (err) {
+      logger.warn(`[Aggregator] No UMK dataset found for year ${CURRENT_YEAR}: ${err.message}`)
+      return // Return undefined to controller
     }
   } else {
     try {
       rawResults = await fetchAllSources()
-    } catch {
-      logger.warn(`[Aggregator] Fetch failed, attempting cached fallback`)
+    } catch (err) {
+      logger.warn(`[Aggregator] Fetch failed, attempting cached fallback: ${err.message}`)
       const cached = await getCache(cacheKey)
       if (cached) return cached
-      return
+      return // Return undefined to controller
     }
   }
 
   const { umk, living_cost } = reconcileData(rawResults)
   const result = type === 'umk' ? umk : living_cost
 
-  if (result.length) await storeToDatabase(result, type)
+  if (result.length) {
+    await storeToDatabase(result, type)
+  } else {
+    logger.warn(`[Aggregator] No data reconciled for ${type}.`)
+    return result // Return empty array to controller
+  }
 
   // === Cache write & invalidate old ===
   if (isRedisEnabled && redis?.isReady) {
     try {
       await delCache(`aggregator:${type}:${CURRENT_YEAR}:src:*`)
-      await delCache(`aggregator:${type}:${CURRENT_YEAR}:combined`)
-      await setCache(cacheKey, result, 86400 * 30)
-      await redis.incr(keyVersion(type))
+      await delCache(cacheKey) // Use cacheKey variable
+      await setCache(cacheKey, result, 86400 * 30) // Cache for 30 days
+      // await redis.incr(keyVersion(type)) // This is redundant with bumpVersion
       await bumpVersion(type)
+      
+      const currentVersion = await redis.get(keyVersion(type))
       await redis.hSet('aggregator:last_sync', {
         [type]: new Date().toISOString(),
-        [`${type}_version`]: await redis.get(keyVersion(type)),
+        [`${type}_version`]: currentVersion || '1',
       })
       logger.info(`[Aggregator] Cache updated & version bumped for ${type}`)
     } catch (e) {
@@ -340,7 +359,7 @@ export async function autoSync(type = 'living_cost') {
   }
 
   logger.info(`✅ [Aggregator] ${type} sync complete`)
-  return result
+  return result // Return the processed data
 }
 
 // === Exportable for testing ===
