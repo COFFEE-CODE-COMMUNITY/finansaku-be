@@ -1,6 +1,6 @@
 import request from 'supertest'
 import app from '../src/app.js'
-import { prisma } from '../src/config/prisma.js' // ✅ fixed import
+import { prisma } from '../src/config/prisma.js'
 
 beforeAll(async () => {
   console.log('🔗 Initializing Prisma connection...')
@@ -24,6 +24,9 @@ describe('Auth API', () => {
   beforeAll(() => console.log('🚀 Starting Auth API tests...'))
 
   beforeEach(async () => {
+    // Fix: Delete dependent records first to avoid foreign key constraint violations
+    await prisma.sakuAllocation.deleteMany()
+    await prisma.saku.deleteMany()
     await prisma.refreshToken.deleteMany()
     await prisma.user.deleteMany()
   })
