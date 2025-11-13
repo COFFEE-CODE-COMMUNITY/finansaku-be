@@ -11,11 +11,6 @@ const CSV_FILE_NAME = 'kaggle_living_cost.csv'
 export const kaggle = {
   name: 'kaggle',
 
-  // UMK is handled by the main service, so this function is empty.
-  async fetchUMK(year) {
-    return []
-  },
-
   async fetchLivingCost(year) {
     const csvPath = path.join(process.cwd(), 'src/services/aggregator/data', CSV_FILE_NAME)
     const csv = await fs.readFile(csvPath, 'utf8').catch(()=> '')
