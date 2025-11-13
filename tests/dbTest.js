@@ -13,8 +13,6 @@ async function main() {
     console.log("✅ Connected! Found", userCount, "users.")
   } catch (err) {
     console.error("❌ Error:", err)
-  } finally {
-    await prisma.$disconnect()
   }
 }
 

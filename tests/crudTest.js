@@ -48,5 +48,4 @@ main()
     console.error("❌ CRUD test failed:", e)
   })
   .finally(async () => {
-    await prisma.$disconnect()
   })
