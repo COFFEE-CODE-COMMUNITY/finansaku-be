@@ -7,11 +7,13 @@ on:
       - dev
 
 jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
+    deploy:
+        runs-on: ubuntu-latest
+        env:
+            # Jika manual run berisi input, pakai itu; kalau tidak, pakai nama branch dari push
+            BRANCH: ${{ github.event.inputs.branch != '' && github.event.inputs.branch || github.ref_name }}
+        steps:
+            - uses: actions/checkout@v4
 
       - name: SSH into VM and deploy
         uses: appleboy/ssh-action@v0.1.10
@@ -22,5 +24,6 @@ jobs:
           key: ${{ secrets.VM_SSH_KEY }}
           script: |
             cd ~/finansaku
+            echo "Deploying branch: ${BRANCH}"
             # Pass the branch name (e.li., "main" or "dev") to the script
             ./scripts/deploy.sh ${{ github.ref_name }}

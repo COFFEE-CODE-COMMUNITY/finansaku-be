@@ -1,4 +1,6 @@
-import express from 'express' 
+import "dotenv/config"
+
+import express from 'express'
 import cors from 'cors'
 import cookieParser from 'cookie-parser'
 
@@ -18,29 +20,32 @@ import allocationRoutes from './routes/allocation.routes.js'
 import systemRoutes from './routes/system.routes.js'
 
 import logger from './config/logger.js'
+import surveyRoutes from "./routes/survey.routes.js"
 import { redis, isRedisEnabled } from './config/redis.js'
 import config from './config/index.js'
 import { registerAggregatorCron } from './jobs/aggregator.cron.js'
-import './config/prisma.js' // ✅ import for side-effect (ensures Prisma connection)
+import './config/prisma.js'
 
 // === Initialize Express App ===
 const app = express()
 
 // === Proxy Trust Configuration ===
-if (config.NODE_ENV === 'production') app.set('trust proxy', 1)
+if (config.NODE_ENV === "production") {
+    app.set("trust proxy", 1) // trust first proxy (Nginx)
+}
 
 // === Core Middlewares ===
-app.use(express.json({ limit: '1mb' }))
+app.use(express.json({ limit: "1mb" }))
 app.use(cookieParser())
 app.use(requestLogger)
 app.use(ipBlocker)
-logger.info('✅ FinanSaku backend starting...')
+logger.info("✅ FinanSaku backend starting...")
 
 // === CORS Configuration ===
 const allowedOrigins = [
-  'http://localhost:5173',
-  'https://finansaku.space',
-  'https://www.finansaku.space',
+    "http://localhost:5173",
+    "https://finansaku.space",
+    "https://www.finansaku.space",
 ]
 
 app.use(
@@ -57,28 +62,28 @@ app.options(/.*/, cors({ origin: allowedOrigins, credentials: true }))
 
 // === Rate Limiting ===
 app.use(globalRateLimiter)
-app.use('/api/v1/auth/login', authRateLimiter)
+app.use("/api/v1/auth/login", authRateLimiter)
 
 // === Health Check Routes ===
 app.get('/', (_req, res) => res.json({ message: 'FinanSaku API is running' }))
 
-app.get('/api/v1/health', async (_req, res) => {
-  let redisStatus = 'disabled'
-  if (isRedisEnabled) {
-    try {
-      await redis.ping()
-      redisStatus = 'healthy'
-    } catch {
-      redisStatus = 'unreachable'
+app.get("/api/v1/health", async (_req, res) => {
+    let redisStatus = "disabled"
+    if (isRedisEnabled) {
+        try {
+            await redis.ping()
+            redisStatus = "healthy"
+        } catch {
+            redisStatus = "unreachable"
+        }
     }
-  }
 
-  res.json({
-    ok: true,
-    uptime: process.uptime(),
-    redis: redisStatus,
-    timestamp: new Date().toISOString(),
-  })
+    res.json({
+        ok: true,
+        uptime: process.uptime(),
+        redis: redisStatus,
+        timestamp: new Date().toISOString(),
+    })
 })
 
 // === API Routes ===
@@ -91,6 +96,7 @@ app.use('/api/v1/notifications', authenticate, notificationRoutes)
 app.use('/api/v1/dashboard', authenticate, dashboardRoutes)
 app.use('/api/v1/history', authenticate, historyRoutes)
 app.use('/api/v1', systemRoutes)
+app.use('/api/v1/survey', surveyRoutes)
 
 // === Cron Job Registration (after Prisma is ready) ===
 registerAggregatorCron()

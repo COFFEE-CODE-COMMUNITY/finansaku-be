@@ -1,4 +1,5 @@
-echo "🚀 Starting FinanSaku deployment..."
+#!/usr/bin/env bash
+set -euo pipefail
 
 # 1. Read the branch name (e.g., "main" or "dev") from the first argument
 #    Defaults to "dev" if no argument is provided.
