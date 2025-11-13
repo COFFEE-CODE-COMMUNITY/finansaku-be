@@ -10,15 +10,16 @@ import {
   keySource,
   keyCombined,
   keyVersion,
-} from '../../utils/cache.js'
-import crypto from 'node:crypto' // Import crypto
+} from '../../utils/cache.js' // ✅ Corrected path
+import fs from 'node:fs' // ✅ Using fs
+import { URL } from 'node:url' // ✅ Using URL to find file path
 
 // === Environment Variables ===
 const BPS_API_KEY = config.BPS_API_KEY || ''
 const CURRENT_YEAR = new Date().getFullYear()
 
 // === Data Sources ===
-// UMK (manual-only): admin uploads Kemnaker/BPS JSON into ./__mocks__/umk_YYYY.json
+// UMK (manual-only): admin uploads Kemnaker/BPS JSON into ./data/umk_YYYY.json
 // Living-cost: automatic BPS + fallback Kaggle (CSV/JSON)
 const DEFAULT_SOURCES = [
   {
@@ -93,7 +94,7 @@ function normalizeLivingCostData(source, raw) {
       if (!cityId && !cityName) return null
       if (!index || !Number.isFinite(index)) return null
       return {
-        // Use city name as the ID for reconciliation
+         // Use city name as the ID for reconciliation
         cityId: String(cityName || cityId).trim(),
         year,
         index,
@@ -168,7 +169,19 @@ function reconcileData(rawResults = []) {
   }
 }
 
-// === Fetch data from remote + cache + __mocks__ fallback ===
+// === Helper function to read local JSON data ===
+function readLocalJson(fileName) {
+  try {
+    const filePath = new URL(`./data/${fileName}`, import.meta.url)
+    const fileContent = fs.readFileSync(filePath, 'utf-8')
+    return JSON.parse(fileContent)
+  } catch (err) {
+    logger.warn(`[Aggregator] Could not read local data file: ${fileName}. Error: ${err.message}`)
+    return null
+  }
+}
+
+// === Fetch data from remote + cache + data fallback ===
 export async function fetchAllSources() {
   const results = []
 
@@ -205,18 +218,17 @@ export async function fetchAllSources() {
         logger.warn('[Aggregator] Redis disabled, skipping cache fallback')
       }
 
-      // === Fallback to local mock JSON ===
-      try {
-        // ✅ FIX: Corrected path from ../__mocks__ to ./__mocks__
-        const mock = await import(`./__mocks__/${src.name}.json`, { assert: { type: 'json' } })
+      // === Fallback to local data JSON ===
+      // ✅ FIX: Replaced import() with readLocalJson()
+      const mockData = readLocalJson(`${src.name}.json`)
+      if (mockData) {
         const normalized =
           src.type === 'living_cost'
-            ? normalizeLivingCostData(src.name, mock.default)
-            : normalizeUMKData(src.name, mock.default)
+            ? normalizeLivingCostData(src.name, mockData)
+            : normalizeUMKData(src.name, mockData)
         results.push({ source: `${src.name} (mock)`, type: src.type, data: normalized })
-      } catch (e) {
-        // Removed CSV fallback logic
-        logger.warn(`[Aggregator] No mock JSON fallback for ${src.name}: ${e.message}`)
+      } else {
+        logger.warn(`[Aggregator] No mock JSON fallback found for ${src.name}`)
       }
     }
   }
@@ -228,7 +240,7 @@ export async function fetchAllSources() {
 export async function storeToDatabase(entries = [], type = 'umk') {
   for (const item of entries) {
     try {
-      // ✅ FIX: Resolve city name (e.g., "Jakarta") to city UUID
+      // Resolve city name (e.g., "Jakarta") to city UUID
       let cityId = item.cityId
       if (!cityId.includes('-')) { // Simple check if it's a name, not UUID
         const city = await prisma.city.findFirst({
@@ -309,12 +321,12 @@ export async function autoSync(type = 'living_cost') {
 
   let rawResults = []
   if (type === 'umk') {
-    try {
-      // ✅ FIX: Corrected path from ../__mocks__ to ./__mocks__
-      const mock = await import(`./__mocks__/umk_${CURRENT_YEAR}.json`, { assert: { type: 'json' } })
-      rawResults = [{ source: 'kemnaker_manual', type: 'umk', data: mock.default }]
-    } catch (err) {
-      logger.warn(`[Aggregator] No UMK dataset found for year ${CURRENT_YEAR}: ${err.message}`)
+    // ✅ FIX: Replaced import() with readLocalJson()
+    const mockData = readLocalJson(`umk_${CURRENT_YEAR}.json`)
+    if (mockData) {
+      rawResults = [{ source: 'kemnaker_manual', type: 'umk', data: mockData }]
+    } else {
+      logger.warn(`[Aggregator] No UMK dataset found for year ${CURRENT_YEAR}`)
       return // Return undefined to controller
     }
   } else {
@@ -344,7 +356,6 @@ export async function autoSync(type = 'living_cost') {
       await delCache(`aggregator:${type}:${CURRENT_YEAR}:src:*`)
       await delCache(cacheKey) // Use cacheKey variable
       await setCache(cacheKey, result, 86400 * 30) // Cache for 30 days
-      // await redis.incr(keyVersion(type)) // This is redundant with bumpVersion
       await bumpVersion(type)
       
       const currentVersion = await redis.get(keyVersion(type))
