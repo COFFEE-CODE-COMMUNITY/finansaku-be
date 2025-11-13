@@ -1,6 +1,8 @@
+import config from '../../../config/index.js'
+
 export async function withRetry(fn, {
-  retries = Number(process.env.AGGREGATOR_MAX_RETRIES || 3),
-  base = Number(process.env.AGGREGATOR_BACKOFF_BASE_MS || 500)
+  retries = Number(config.AGGREGATOR_MAX_RETRIES || 3),
+  base = Number(config.AGGREGATOR_BACKOFF_BASE_MS || 500)
 } = {}) {
   let lastErr
   for (let i = 0; i <= retries; i++) {

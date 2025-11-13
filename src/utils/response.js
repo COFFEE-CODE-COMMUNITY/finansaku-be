@@ -6,6 +6,8 @@ export const success = (res, message = 'Success', data = null, status = 200) => 
   })
 }
 
+export const ok = success // alias for backward compatibility
+
 export const fail = (res, message = 'Error', status = 400, errors = null) => {
   return res.status(status).json({
     success: false,
@@ -14,5 +16,4 @@ export const fail = (res, message = 'Error', status = 400, errors = null) => {
   })
 }
 
-// ⬇️ alias supaya import { ok, fail } tetap jalan
-export const ok = success
+export default { success, ok, fail }

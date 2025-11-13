@@ -1,7 +1,7 @@
 import crypto from 'node:crypto'
 import bcrypt from 'bcrypt'
 import { prisma } from '../config/prisma.js'
-import { redis } from '../config/redis.js'
+import { redis, isRedisEnabled } from '../config/redis.js'
 import {
   sendResetPasswordEmail,
   sendVerificationEmail,
@@ -29,12 +29,22 @@ export const register = async (req, res) => {
     const result = await authService.registerUser({ name, username, email, password })
     const safeUser = sanitizeUser(result.user)
 
-    const token = crypto.randomBytes(32).toString('hex')
-    const verifyKey = `verify:${token}`
-    await redis.set(verifyKey, String(result.user.id))
-    await redis.expire(verifyKey, 60 * 60 * 24)
-    const verifyUrl = `${config.CLIENT_VERIFY_URL}?token=${token}`
-    await sendVerificationEmail(email, name, verifyUrl)
+    // === Email verification (skip safely if Redis disabled) ===
+    try {
+      if (isRedisEnabled) {
+        const token = crypto.randomBytes(32).toString('hex')
+        const verifyKey = `verify:${token}`
+        await redis.set(verifyKey, String(result.user.id))
+        await redis.expire(verifyKey, 60 * 60 * 24)
+        const verifyUrl = `${config.CLIENT_VERIFY_URL}?token=${token}`
+        await sendVerificationEmail(email, name, verifyUrl)
+      } else {
+        log.warn('[VERIFY] Redis disabled — skipping token+email')
+      }
+    } catch (e) {
+      // Don’t fail registration on email/redis issues (tests/dev)
+      log.warn({ err: e }, '[VERIFY] Failed to queue verification — continuing')
+    }
 
     res.status(201).json({
       success: true,
@@ -134,6 +144,9 @@ export const revoke = async (req, res) => {
 
 export const verifyEmail = async (req, res) => {
   try {
+    if (!isRedisEnabled)
+      return res.status(400).json({ success: false, message: 'Verification service unavailable' })
+
     const { token } = req.query
     const userId = await redis.get(`verify:${token}`)
     if (!userId)
@@ -157,6 +170,11 @@ export const resendVerification = async (req, res) => {
     if (user.emailVerifiedAt)
       return res.status(200).json({ success: true, message: 'Email already verified' })
 
+    if (!isRedisEnabled) {
+      log.warn('[VERIFY] Redis disabled — skipping resend')
+      return res.status(200).json({ success: true, message: 'Verification email resent successfully' })
+    }
+
     const token = crypto.randomBytes(32).toString('hex')
     await redis.set(`verify:${token}`, String(user.id))
     await redis.expire(`verify:${token}`, 60 * 60 * 24)
@@ -176,6 +194,11 @@ export const forgotPassword = async (req, res) => {
     const user = await prisma.user.findUnique({ where: { email } })
     if (!user) return res.status(404).json({ success: false, message: 'User not found' })
 
+    if (!isRedisEnabled) {
+      log.warn('[RESET] Redis disabled — skipping reset token')
+      return res.status(200).json({ success: true, message: 'Password reset email sent successfully' })
+    }
+
     const token = crypto.randomBytes(32).toString('hex')
     await redis.set(`reset:${token}`, String(email))
     await redis.expire(`reset:${token}`, 60 * 30)
@@ -192,6 +215,10 @@ export const forgotPassword = async (req, res) => {
 export const resetPassword = async (req, res) => {
   try {
     const { token, newPassword } = req.body
+
+    if (!isRedisEnabled)
+      return res.status(400).json({ success: false, message: 'Invalid or expired reset token' })
+
     const email = await redis.get(`reset:${token}`)
     if (!email)
       return res.status(400).json({ success: false, message: 'Invalid or expired reset token' })

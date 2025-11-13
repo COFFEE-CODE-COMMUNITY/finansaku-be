@@ -15,7 +15,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "seed": "node prisma/seed.js",
-    "test": "cross-env NODE_ENV=test NODE_OPTIONS=--experimental-vm-modules jest",
+    "test": "set NODE_ENV=test && set NODE_OPTIONS=--experimental-vm-modules && jest --runInBand --detectOpenHandles",
     "test:emails": "node tests/mailTest.js all"
   },
   "keywords": [
@@ -34,6 +34,7 @@
     "bcrypt": "^6.0.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
+    "csv-parse": "^6.1.0",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "express-rate-limit": "^8.1.0",

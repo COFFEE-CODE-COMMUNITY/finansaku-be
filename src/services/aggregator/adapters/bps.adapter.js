@@ -1,8 +1,9 @@
 import fetch from 'node-fetch'
 import { withRetry } from '../utils/retry.js'
 import { normalizeLivingCostRow } from '../utils/normalize.js'
+import config from '../../../config/index.js'
 
-const TIMEOUT = Number(process.env.AGGREGATOR_HTTP_TIMEOUT_MS || 8000)
+const TIMEOUT = Number(config.AGGREGATOR_HTTP_TIMEOUT_MS || 8000)
 
 export const bps = {
   name: 'bps',

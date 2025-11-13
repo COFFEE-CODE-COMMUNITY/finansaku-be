@@ -1,9 +1,10 @@
 ---
 aliases: [aggregator-service]
 description: External data aggregation and synchronization guide for UMK and living-cost data in the FinanSaku backend.
-lastUpdated: 2025-10-23
+lastUpdated: 2025-11-07
 maintainer: FinanSaku Backend Team
 ---
+
 # FinanSaku — Aggregator Service Guide
 
 This document explains how the **Aggregator Service** in FinanSaku fetches, reconciles, and stores data for:
@@ -43,7 +44,7 @@ flowchart TD
     B -. Manual Trigger .-> G[/GET /system/aggregator/sync?type=/]
     B -. Cron Trigger .-> H[node-cron Scheduler]
     H --> B
-```
+````
 
 ---
 
@@ -54,13 +55,11 @@ flowchart TD
 | Item               | Description                                        |
 | ------------------ | -------------------------------------------------- |
 | **HTTP Client**    | Native `fetch()`                                   |
-| **Timeout**        | 10 seconds (via `AbortController`)                 |
+| **Timeout**        | 10s (via `AbortController`)                        |
 | **Retries**        | 3 attempts, exponential delay                      |
 | **Sources**        | BPS IHK (auto), Kaggle (manual), UMK JSON (manual) |
 | **Format**         | JSON / CSV auto-detect                             |
 | **Error Handling** | Skips failed source, logs warning                  |
-
----
 
 ### 3.2 Reconciliation Logic
 
@@ -69,8 +68,6 @@ flowchart TD
 | Minor differences | Average values → high confidence     |
 | Large gaps        | Weighted variance → lower confidence |
 | No success        | Fallback to last known DB values     |
-
----
 
 ### 3.3 Database Writes
 
@@ -82,26 +79,21 @@ All writes are **idempotent** with Prisma `upsert()`.
 | `living_cost`     | IHK / cost-of-living index            |
 | `aggregator_logs` | Sync log (source, status, confidence) |
 
----
-
 ### 3.4 Caching
 
-- Redis is **optional** (`ENABLE_REDIS=false` disables silently)
-- Caches `last_sync` timestamp
-- No crash even if Redis is offline
-
----
+- Redis is **optional**.
+- Set `ENABLE_REDIS=false` to disable cleanly (no crashes).
+- Caches `last_sync` timestamp when enabled.
 
 ### 3.5 Cron Job
 
 ```env
-AGGREGATOR_CRON_EXPRESSION=0 3 1 * *  # → Every 1st day of the month at 03:00
+AGGREGATOR_ENABLE_CRON=true
+AGGREGATOR_CRON_EXPRESSION=0 3 1 * *  # Every 1st day of the month at 03:00
 ```
 
-- Scheduler file: `src/config/cron.js`
-- Runs `autoSync('living_cost')` automatically
-
----
+- Scheduler: `src/jobs/aggregator.cron.js`
+- When `AGGREGATOR_ENABLE_CRON=false`, scheduler is skipped (used in tests).
 
 ### 3.6 Manual Sync Endpoint
 
@@ -118,6 +110,8 @@ AGGREGATOR_CRON_EXPRESSION=0 3 1 * *  # → Every 1st day of the month at 03:00
   "message": "Aggregator living_cost sync completed"
 }
 ```
+
+> Tip: Add `?dryRun=true` (if implemented) to inspect decisions without writing.
 
 ---
 
@@ -159,28 +153,36 @@ model AggregatorLog {
 
 ## 5. Testing
 
-| Test               | Description                            |
-| ------------------ | -------------------------------------- |
-| ✅ fetch mock       | Verify warning + fallback to mocks     |
-| ✅ reconciliation   | Confirm averaging & confidence logic   |
-| ✅ UMK manual sync  | Reads local `/__mocks__/umk_YYYY.json` |
-| ✅ living cost sync | Calls `fetchAllSources()` and upserts  |
-| ✅ cron trigger     | Works with `node-cron` simulation      |
+> **Test profile (Jest)**
+> Set in `jest.setup.js`:
+>
+> - `NODE_ENV=test`
+> - `ENABLE_REDIS=false` (skip Redis paths safely)
+> - `AGGREGATOR_ENABLE_CRON=false` (avoid background jobs)
+
+| Test                 | Status | Notes                                                                              |
+| -------------------- | ------ | ---------------------------------------------------------------------------------- |
+| fetch mock           | ✅      | Falls back to merged mock if remote fetch fails                                    |
+| reconciliation       | ✅      | Averages + confidence scoring covered                                              |
+| UMK manual sync      | ✅      | Reads local mocked dataset in tests                                                |
+| living cost sync     | ✅      | `fetchAllSources()` + upserts                                                      |
+| cron trigger         | ✅/~    | Cron registration & trigger simulated; add failure-path assertions for robustness  |
+| partial API failures | ~      | Add table-driven cases: some sources fail, some succeed, verify chosen source/logs |
 
 ---
 
 ## 6. Future Improvements
 
-- Weighted trust scores per data source
+- Weighted trust scores per source
 - Historical snapshots of raw API responses
 - Notification system on failed sync
-- Optional provincial rollup aggregation
+- Optional provincial roll-up aggregation
 
 ---
 
 ## 7. Notes
 
-- Entire logic runs in Express — no daemon required
+- Entire logic runs inside Express — no separate daemon
 - Redis is non-blocking (safe to disable)
 - Errors never crash the core app
-- Once live APIs are confirmed, update source constants in `aggregator.service.js`
+- Update source constants in `aggregator.service.js` once final public APIs are confirmed

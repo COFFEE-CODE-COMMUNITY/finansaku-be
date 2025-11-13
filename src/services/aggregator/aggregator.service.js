@@ -2,14 +2,24 @@ import { prisma } from '../../config/prisma.js'
 import logger from '../../config/logger.js'
 import { redis, isRedisEnabled } from '../../config/redis.js'
 import config from '../../config/index.js'
-import { delCache, bumpVersion } from './utils/cache.js'
+import {
+  delCache,
+  bumpVersion,
+  getCache,
+  setCache,
+  keySource,
+  keyCombined,
+  keyVersion,
+} from '../../utils/cache.js' // ✅ Corrected path
+import fs from 'node:fs' // ✅ Using fs
+import { URL } from 'node:url' // ✅ Using URL to find file path
 
 // === Environment Variables ===
 const BPS_API_KEY = config.BPS_API_KEY || ''
 const CURRENT_YEAR = new Date().getFullYear()
 
 // === Data Sources ===
-// UMK (manual-only): admin uploads Kemnaker/BPS JSON into __mocks__/umk_YYYY.json
+// UMK (manual-only): admin uploads Kemnaker/BPS JSON into ./data/umk_YYYY.json
 // Living-cost: automatic BPS + fallback Kaggle (CSV/JSON)
 const DEFAULT_SOURCES = [
   {
@@ -61,7 +71,8 @@ function normalizeUMKData(source, raw) {
       if (!cityId && !cityName) return null
       if (!amount || !Number.isFinite(amount)) return null
       return {
-        cityId: String(cityId || cityName).trim(),
+        // Use city name as the ID for reconciliation
+        cityId: String(cityName || cityId).trim(),
         year,
         amount,
         source,
@@ -75,13 +86,16 @@ function normalizeLivingCostData(source, raw) {
   return raw
     .map((item) => {
       const cityId = item.cityId || item.city_name || item.kota || item.id
+      const cityName = item.cityName || item.nama_kota || item.kabupaten_kota
       const year = Number(item.year || item.tahun || CURRENT_YEAR)
       const index = Number(item.index || item.value || item.ihk)
       const currency = item.currency || 'IDR'
       const sourceUrl = item.sourceUrl || item.url || null
-      if (!cityId || !index || !Number.isFinite(index)) return null
+      if (!cityId && !cityName) return null
+      if (!index || !Number.isFinite(index)) return null
       return {
-        cityId,
+         // Use city name as the ID for reconciliation
+        cityId: String(cityName || cityId).trim(),
         year,
         index,
         currency,
@@ -105,7 +119,7 @@ function reconcileData(rawResults = []) {
     const target = type === 'living_cost' ? buckets.living_cost : buckets.umk
 
     for (const entry of normalized) {
-      const key = `${entry.cityId}-${entry.year}`
+      const key = `${entry.cityId.toLowerCase()}-${entry.year}`
       if (!target.has(key)) {
         target.set(key, {
           ...entry,
@@ -155,30 +169,70 @@ function reconcileData(rawResults = []) {
   }
 }
 
-// === Fetch data from remote + __mocks__ fallback ===
+// === Helper function to read local JSON data ===
+function readLocalJson(fileName) {
+  try {
+    const filePath = new URL(`./data/${fileName}`, import.meta.url)
+    const fileContent = fs.readFileSync(filePath, 'utf-8')
+    return JSON.parse(fileContent)
+  } catch (err) {
+    logger.warn(`[Aggregator] Could not read local data file: ${fileName}. Error: ${err.message}`)
+    return null
+  }
+}
+
+// === Fetch data from remote + cache + data fallback ===
 export async function fetchAllSources() {
   const results = []
+
   for (const src of SOURCES) {
+    const srcKey = keySource(src.type, CURRENT_YEAR, src.name)
     try {
       logger.info(`[Aggregator] Fetching ${src.type} from ${src.name}`)
-      const data = await safeFetch(src.url)
-      results.push({ source: src.name, type: src.type, data })
+      const raw = await safeFetch(src.url)
+
+      // normalize remote JSON (handles both array and { data: [...] } shapes)
+      const normalized =
+        src.type === 'living_cost'
+          ? normalizeLivingCostData(src.name, Array.isArray(raw?.data) ? raw.data : raw)
+          : normalizeUMKData(src.name, Array.isArray(raw?.data) ? raw.data : raw)
+
+      if (isRedisEnabled && redis?.isReady) {
+        await setCache(srcKey, normalized, 86400) // per-source TTL: 1 day
+        await redis.incr(keyVersion(src.type)) // track version per type
+      }
+
+      results.push({ source: src.name, type: src.type, data: normalized })
     } catch (err) {
       logger.warn(`[Aggregator] Failed ${src.name}: ${err.message}`)
-      try {
-        const mock = await import(`../__mocks__/${src.name}.json`, {
-          assert: { type: 'json' },
-        })
-        results.push({
-          source: `${src.name} (mock)`,
-          type: src.type,
-          data: mock.default,
-        })
-      } catch {
-        logger.warn(`[Aggregator] No mock fallback for ${src.name}`)
+
+      // === Try per-source cached data ===
+      if (isRedisEnabled && redis?.isReady) {
+        const cached = await getCache(srcKey)
+        if (cached) {
+          logger.info(`[Aggregator] Using cached ${src.name} due to failure`)
+          results.push({ source: `${src.name} (cache)`, type: src.type, data: cached })
+          continue
+        }
+      } else {
+        logger.warn('[Aggregator] Redis disabled, skipping cache fallback')
+      }
+
+      // === Fallback to local data JSON ===
+      // ✅ FIX: Replaced import() with readLocalJson()
+      const mockData = readLocalJson(`${src.name}.json`)
+      if (mockData) {
+        const normalized =
+          src.type === 'living_cost'
+            ? normalizeLivingCostData(src.name, mockData)
+            : normalizeUMKData(src.name, mockData)
+        results.push({ source: `${src.name} (mock)`, type: src.type, data: normalized })
+      } else {
+        logger.warn(`[Aggregator] No mock JSON fallback found for ${src.name}`)
       }
     }
   }
+
   return results
 }
 
@@ -186,26 +240,43 @@ export async function fetchAllSources() {
 export async function storeToDatabase(entries = [], type = 'umk') {
   for (const item of entries) {
     try {
+      // Resolve city name (e.g., "Jakarta") to city UUID
+      let cityId = item.cityId
+      if (!cityId.includes('-')) { // Simple check if it's a name, not UUID
+        const city = await prisma.city.findFirst({
+          where: { name: { equals: cityId, mode: 'insensitive' } }
+        })
+        
+        if (city) {
+          cityId = city.id // Replace name with UUID
+        } else {
+          logger.warn(`[Aggregator] Skipping entry: Could not find city ID for name "${item.cityId}"`)
+          continue // Skip this record
+        }
+      }
+
       if (type === 'umk') {
         await prisma.uMK.upsert({
-          where: { cityId_year: { cityId: item.cityId, year: item.year } },
+          where: { cityId_year: { cityId: cityId, year: item.year } },
           update: { amount: item.amount },
           create: {
-            cityId: item.cityId,
+            id: crypto.randomUUID(), // Add UUID
+            cityId: cityId,
             year: item.year,
             amount: item.amount,
           },
         })
       } else if (type === 'living_cost') {
         await prisma.livingCost.upsert({
-          where: { cityId_year: { cityId: item.cityId, year: item.year } },
+          where: { cityId_year: { cityId: cityId, year: item.year } },
           update: {
             index: item.index,
             currency: item.currency ?? 'IDR',
             sourceUrl: item.sourceUrl || null,
           },
           create: {
-            cityId: item.cityId,
+            id: crypto.randomUUID(), // Add UUID
+            cityId: cityId,
             year: item.year,
             index: item.index,
             currency: item.currency ?? 'IDR',
@@ -216,17 +287,18 @@ export async function storeToDatabase(entries = [], type = 'umk') {
 
       await prisma.aggregatorLog.create({
         data: {
-          cityId: item.cityId,
+          id: crypto.randomUUID(), // Add UUID
+          cityId: cityId,
           year: item.year,
           type,
           chosenSource: item.source,
           confidence: item.confidence ?? 100,
           status: 'success',
-          message: `Stored ${type} for ${item.cityId} (${item.year})`,
+          message: `Stored ${type} for ${cityId} (${item.year})`,
         },
       })
     } catch (err) {
-      logger.error(`[Aggregator] Failed storing ${type}: ${err.message}`)
+      logger.error(`[Aggregator] Failed storing ${type} (City: ${item.cityId}): ${err.message}`)
     }
   }
 }
@@ -235,39 +307,71 @@ export async function storeToDatabase(entries = [], type = 'umk') {
 export async function autoSync(type = 'living_cost') {
   logger.info(`🔁 [Aggregator] Starting autoSync for ${type}...`)
 
+  if (!isRedisEnabled) logger.info('[Aggregator] Redis disabled — stateless mode')
+
+  // === Try cache first ===
+  const cacheKey = keyCombined(type, CURRENT_YEAR)
+  if (isRedisEnabled && redis?.isReady) {
+    const cached = await getCache(cacheKey)
+    if (cached) {
+      logger.info(`[Aggregator] Using cached ${type} data for ${CURRENT_YEAR}`)
+      return cached
+    }
+  }
+
   let rawResults = []
   if (type === 'umk') {
-    try {
-      const mock = await import(`../__mocks__/umk_${CURRENT_YEAR}.json`, {
-        assert: { type: 'json' },
-      })
-      rawResults = [
-        { source: 'kemnaker_manual', type: 'umk', data: mock.default },
-      ]
-    } catch {
+    // ✅ FIX: Replaced import() with readLocalJson()
+    const mockData = readLocalJson(`umk_${CURRENT_YEAR}.json`)
+    if (mockData) {
+      rawResults = [{ source: 'kemnaker_manual', type: 'umk', data: mockData }]
+    } else {
       logger.warn(`[Aggregator] No UMK dataset found for year ${CURRENT_YEAR}`)
-      return
+      return // Return undefined to controller
     }
   } else {
-    rawResults = await fetchAllSources()
+    try {
+      rawResults = await fetchAllSources()
+    } catch (err) {
+      logger.warn(`[Aggregator] Fetch failed, attempting cached fallback: ${err.message}`)
+      const cached = await getCache(cacheKey)
+      if (cached) return cached
+      return // Return undefined to controller
+    }
   }
 
   const { umk, living_cost } = reconcileData(rawResults)
-  if (type === 'umk' && umk.length) await storeToDatabase(umk, 'umk')
-  if (type === 'living_cost' && living_cost.length)
-    await storeToDatabase(living_cost, 'living_cost')
+  const result = type === 'umk' ? umk : living_cost
 
-  // === Cache invalidation + version bump ===
+  if (result.length) {
+    await storeToDatabase(result, type)
+  } else {
+    logger.warn(`[Aggregator] No data reconciled for ${type}.`)
+    return result // Return empty array to controller
+  }
+
+  // === Cache write & invalidate old ===
   if (isRedisEnabled && redis?.isReady) {
     try {
-      await delCache(`aggregator:${type}:${CURRENT_YEAR}:*`)
+      await delCache(`aggregator:${type}:${CURRENT_YEAR}:src:*`)
+      await delCache(cacheKey) // Use cacheKey variable
+      await setCache(cacheKey, result, 86400 * 30) // Cache for 30 days
       await bumpVersion(type)
-      await redis.set('aggregator:last_sync', new Date().toISOString())
-      logger.info(`[Aggregator] Cache invalidated & version bumped for ${type}`)
+      
+      const currentVersion = await redis.get(keyVersion(type))
+      await redis.hSet('aggregator:last_sync', {
+        [type]: new Date().toISOString(),
+        [`${type}_version`]: currentVersion || '1',
+      })
+      logger.info(`[Aggregator] Cache updated & version bumped for ${type}`)
     } catch (e) {
       logger.warn(`[Aggregator] Could not update Redis cache: ${e.message}`)
     }
   }
 
   logger.info(`✅ [Aggregator] ${type} sync complete`)
+  return result // Return the processed data
 }
+
+// === Exportable for testing ===
+export { reconcileData }

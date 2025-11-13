@@ -1,23 +1,29 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Urutan prioritas:
-# 1) Argumen posisi $1
-# 2) Env BRANCH
-# 3) Default fallback
-BRANCH="${1:-${BRANCH:-dev-b}}"
+# 1. Read the branch name (e.g., "main" or "dev") from the first argument
+#    Defaults to "dev" if no argument is provided.
+BRANCH=${1:-dev}
 
-echo "🚀 Deploying FinanSaku (branch: $BRANCH)"
-git fetch origin "$BRANCH"
-# checkout jika belum ada lokalnya
-git rev-parse --verify "$BRANCH" >/dev/null 2>&1 || git switch -c "$BRANCH" --track "origin/$BRANCH"
-git checkout "$BRANCH"
-git reset --hard "origin/$BRANCH"
+# Go to your backend folder
+cd /root/finansaku || { echo "❌ Project directory not found"; exit 1; }
 
-echo "📦 Installing dependencies..."
-npm ci --omit=dev || npm ci
+echo "🔄 Pulling latest changes from $BRANCH..."
+git fetch origin $BRANCH
+git reset --hard origin/$BRANCH
 
-echo "🔁 Restarting PM2..."
-pm2 restart finansaku || pm2 start ecosystem.config.cjs --only finansaku
+# 2. Run a full npm install to get devDependencies (like prisma)
+echo "📦 Installing ALL dependencies (for Prisma)..."
+npm install
 
-echo "✅ Done."
+# 3. Add the prisma generate step
+echo "🧬 Generating Prisma client..."
+npx prisma generate
+
+echo "🔁 Restarting PM2 process..."
+pm2 restart finansaku --update-env
+
+echo "🧹 Cleaning up old logs..."
+pm2 flush
+
+echo "✅ Deployment complete!"
