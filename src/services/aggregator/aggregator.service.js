@@ -240,6 +240,7 @@ export async function fetchAllSources() {
 export async function storeToDatabase(entries = [], type = 'umk') {
   for (const item of entries) {
     try {
+      // Resolve city name (e.g., "Jakarta") to city UUID
       let cityId = item.cityId
       if (!cityId.includes('-')) { // Simple check if it's a name, not UUID
         const city = await prisma.city.findFirst({
@@ -259,7 +260,7 @@ export async function storeToDatabase(entries = [], type = 'umk') {
           where: { cityId_year: { cityId: cityId, year: item.year } },
           update: { amount: item.amount },
           create: {
-            id: crypto.randomUUID(), // Add UUID
+            id: crypto.randomUUID(), 
             cityId: cityId,
             year: item.year,
             amount: item.amount,
@@ -274,7 +275,7 @@ export async function storeToDatabase(entries = [], type = 'umk') {
             sourceUrl: item.sourceUrl || null,
           },
           create: {
-            id: crypto.randomUUID(), // Add UUID
+            id: crypto.randomUUID(), 
             cityId: cityId,
             year: item.year,
             index: item.index,
@@ -286,7 +287,7 @@ export async function storeToDatabase(entries = [], type = 'umk') {
 
       await prisma.aggregatorLog.create({
         data: {
-          id: crypto.randomUUID(), // Add UUID
+          id: crypto.randomUUID(), 
           cityId: cityId,
           year: item.year,
           type,
