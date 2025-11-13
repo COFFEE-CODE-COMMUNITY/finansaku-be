@@ -98,7 +98,7 @@ app.use("/api/v1/saku", authenticate, sakuRoutes);
 app.use("/api/v1/umk", authenticate, umkRoutes);
 app.use("/api/v1/allocations", authenticate, allocationRoutes);
 app.use("/api/v1/notifications", authenticate, notificationRoutes);
-app.use("/api/v1/dashboard", authenticate, dashboardRoutes);
+app.use("/api/v1/dashboard", dashboardRoutes);
 app.use("/api/v1/history", authenticate, historyRoutes);
 app.use("/api/v1", systemRoutes); // aggregator + other system routes
 app.use("/api/v1/survey", surveyRoutes);
