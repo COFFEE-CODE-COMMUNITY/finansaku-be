@@ -12,78 +12,60 @@ console.log(`[env] Loaded environment from ${envPath} (override=true)`)
 // === Define central config object ===
 const config = {
   // === Environment ===
-  NODE_ENV: process.env.NODE_ENV || 'development',
-  PORT: process.env.PORT || 8081,
+  NODE_ENV: process.env.NODE_ENV?.trim() || 'development',
+  PORT: process.env.PORT?.trim() || 8081,
 
   // === Base URLs ===
-  API_BASE_URL: process.env.API_BASE_URL,
-  APP_URL: process.env.APP_URL,
-  CLIENT_WEB_REDIRECT: process.env.CLIENT_WEB_REDIRECT,
+  API_BASE_URL: process.env.API_BASE_URL?.trim(),
+  APP_URL: process.env.APP_URL?.trim(),
+  CLIENT_WEB_REDIRECT: process.env.CLIENT_WEB_REDIRECT?.trim(),
 
   // === Database ===
-  DATABASE_URL: process.env.DATABASE_URL,
-  DIRECT_URL: process.env.DIRECT_URL,
+  DATABASE_URL: process.env.DATABASE_URL?.trim(),
+  DIRECT_URL: process.env.DIRECT_URL?.trim(),
 
   // === JWT / Tokens ===
-  ACCESS_TOKEN_SECRET: process.env.ACCESS_TOKEN_SECRET,
-  REFRESH_TOKEN_SECRET: process.env.REFRESH_TOKEN_SECRET,
-  ACCESS_TOKEN_EXPIRES: process.env.ACCESS_TOKEN_EXPIRES,
-  REFRESH_TOKEN_EXPIRES: process.env.REFRESH_TOKEN_EXPIRES,
+  ACCESS_TOKEN_SECRET: process.env.ACCESS_TOKEN_SECRET?.trim(),
+  REFRESH_TOKEN_SECRET: process.env.REFRESH_TOKEN_SECRET?.trim(),
+  ACCESS_TOKEN_EXPIRES: process.env.ACCESS_TOKEN_EXPIRES?.trim(),
+  REFRESH_TOKEN_EXPIRES: process.env.REFRESH_TOKEN_EXPIRES?.trim(),
 
   // === Redis ===
-  ENABLE_REDIS: process.env.ENABLE_REDIS === 'true',
-  REDIS_URL: process.env.REDIS_URL,
-  REDIS_HOST: process.env.REDIS_HOST,
-  REDIS_PORT: Number(process.env.REDIS_PORT) || 6379,
-  REDIS_PASSWORD: process.env.REDIS_PASSWORD,
+  ENABLE_REDIS: process.env.ENABLE_REDIS?.trim(),
+  REDIS_URL: process.env.REDIS_URL?.trim(),
+  REDIS_HOST: process.env.REDIS_HOST?.trim(),
+  REDIS_PORT: process.env.REDIS_PORT?.trim(),
+  REDIS_PASSWORD: process.env.REDIS_PASSWORD?.trim(),
 
   // === Google OAuth2 ===
-  GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
-  GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
-  GOOGLE_REDIRECT_URI: process.env.GOOGLE_REDIRECT_URI,
+  GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID?.trim(),
+  GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET?.trim(),
+  GOOGLE_REDIRECT_URI: process.env.GOOGLE_REDIRECT_URI?.trim(),
   OAUTH2_ENDPOINT_GOOGLE:
-    process.env.OAUTH2_ENDPOINT_GOOGLE ||
+    process.env.OAUTH2_ENDPOINT_GOOGLE?.trim() ||
     'https://accounts.google.com/o/oauth2/v2/auth',
   GOOGLE_TOKEN_URL:
-    process.env.GOOGLE_TOKEN_URL ||
+    process.env.GOOGLE_TOKEN_URL?.trim() ||
     'https://oauth2.googleapis.com/token',
   GOOGLE_USERINFO_URL:
-    process.env.GOOGLE_USERINFO_URL ||
+    process.env.GOOGLE_USERINFO_URL?.trim() ||
     'https://www.googleapis.com/oauth2/v3/userinfo',
 
   // === Email ===
-  MAIL_HOST: process.env.MAIL_HOST,
-  MAIL_PORT: Number(process.env.MAIL_PORT) || 587,
-  MAIL_USER: process.env.MAIL_USER,
-  MAIL_PASS: process.env.MAIL_PASS,
-  MAIL_FROM_NAME: process.env.MAIL_FROM_NAME,
-  MAIL_FROM_EMAIL: process.env.MAIL_FROM_EMAIL,
+  MAIL_HOST: process.env.MAIL_HOST?.trim(),
+  MAIL_PORT: process.env.MAIL_PORT?.trim(),
+  MAIL_USER: process.env.MAIL_USER?.trim(),
+  MAIL_PASS: process.env.MAIL_PASS?.trim(),
+  MAIL_FROM_NAME: process.env.MAIL_FROM_NAME?.trim(),
+  MAIL_FROM_EMAIL: process.env.MAIL_FROM_EMAIL?.trim(),
 
   // === Logging ===
-  LOG_LEVEL: process.env.LOG_LEVEL || 'info',
-  LOG_DIR: process.env.LOG_DIR || 'logs',
+  LOG_LEVEL: process.env.LOG_LEVEL?.trim() || 'info',
+  LOG_DIR: process.env.LOG_DIR?.trim() || 'logs',
 
   // === Aggregator ===
-  AGGREGATOR_ENABLE_CRON:
-    process.env.AGGREGATOR_ENABLE_CRON === 'true',
-  AGGREGATOR_CRON_EXPRESSION:
-    process.env.AGGREGATOR_CRON_EXPRESSION || '0 3 1 * *',
-  AGGREGATOR_HTTP_TIMEOUT_MS:
-    Number(process.env.AGGREGATOR_HTTP_TIMEOUT_MS) || 8000,
-  AGGREGATOR_MAX_RETRIES:
-    Number(process.env.AGGREGATOR_MAX_RETRIES) || 3,
-  AGGREGATOR_BACKOFF_BASE_MS:
-    Number(process.env.AGGREGATOR_BACKOFF_BASE_MS) || 500,
-  AGGREGATOR_CACHE_TTL_S:
-    Number(process.env.AGGREGATOR_CACHE_TTL_S) || 86400,
-  AGGREGATOR_CONFIRM_TTL_S:
-    Number(process.env.AGGREGATOR_CONFIRM_TTL_S) || 604800,
-  AGGREGATOR_SOURCE_WEIGHTS:
-    process.env.AGGREGATOR_SOURCE_WEIGHTS
-      ? JSON.parse(process.env.AGGREGATOR_SOURCE_WEIGHTS)
-      : { kemnaker: 0.6, bps: 0.3, kaggle: 0.1 },
-  AGGREGATOR_SOURCES: process.env.AGGREGATOR_SOURCES,
-  BPS_API_KEY: process.env.BPS_API_KEY,
+  AGGREGATOR_CRON_EXPRESSION: process.env.AGGREGATOR_CRON_EXPRESSION?.trim(),
+  BPS_API_KEY: process.env.BPS_API_KEY?.trim(),
 }
 
 export default config
