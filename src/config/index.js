@@ -19,6 +19,10 @@ const config = {
   API_BASE_URL: process.env.API_BASE_URL?.trim(),
   APP_URL: process.env.APP_URL?.trim(),
   CLIENT_WEB_REDIRECT: process.env.CLIENT_WEB_REDIRECT?.trim(),
+  CLIENT_VERIFY_URL: process.env.CLIENT_VERIFY_URL?.trim(),
+  CLIENT_RESET_URL: process.env.CLIENT_RESET_URL?.trim(),
+  CLIENT_EMAIL_CHANGE_URL: process.env.CLIENT_EMAIL_CHANGE_URL?.trim(),
+  CLIENT_URL: process.env.CLIENT_URL?.trim(),
 
   // === Database ===
   DATABASE_URL: process.env.DATABASE_URL?.trim(),
@@ -63,9 +67,16 @@ const config = {
   LOG_LEVEL: process.env.LOG_LEVEL?.trim() || 'info',
   LOG_DIR: process.env.LOG_DIR?.trim() || 'logs',
 
-  // === Aggregator ===
+  // === Rate Limiting ===
+  RATE_LIMIT_GLOBAL: process.env.RATE_LIMIT_GLOBAL?.trim(),
+  RATE_LIMIT_AUTH: process.env.RATE_LIMIT_AUTH?.trim(),
+  RATE_LIMIT_WINDOW_MS: process.env.RATE_LIMIT_WINDOW_MS?.trim(),
+
+  // === Aggregator Service ===
+  AGGREGATOR_ENABLE_CRON: process.env.AGGREGATOR_ENABLE_CRON?.trim(),
   AGGREGATOR_CRON_EXPRESSION: process.env.AGGREGATOR_CRON_EXPRESSION?.trim(),
   BPS_API_KEY: process.env.BPS_API_KEY?.trim(),
+  AGGREGATOR_SOURCES: process.env.AGGREGATOR_SOURCES?.trim(),
 }
 
 export default config
