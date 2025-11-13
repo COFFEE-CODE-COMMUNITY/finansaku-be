@@ -62,8 +62,7 @@ describe('Aggregator - partial failures across sources', () => {
     const existing2024 = await prisma.livingCost.findUnique({
       where: { cityId_year: { cityId: bandung.id, year: 2024 } },
     })
-    
-    // ✅ FIX: Convert the string from Prisma to a Number
-    expect(Number(existing2024?.index)).toBe(129.9) 
+
+    expect(Number(existing2024?.index)).toBe(129.9)
   })
 })

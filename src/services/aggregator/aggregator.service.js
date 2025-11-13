@@ -10,9 +10,10 @@ import {
   keySource,
   keyCombined,
   keyVersion,
-} from '../../utils/cache.js' // ✅ Corrected path
-import fs from 'node:fs' // ✅ Using fs
-import { URL } from 'node:url' // ✅ Using URL to find file path
+} from '../../utils/cache.js'
+import fs from 'node:fs'
+import { URL } from 'node:url'
+import crypto from 'node:crypto'
 
 // === Environment Variables ===
 const BPS_API_KEY = config.BPS_API_KEY || ''
@@ -219,7 +220,6 @@ export async function fetchAllSources() {
       }
 
       // === Fallback to local data JSON ===
-      // ✅ FIX: Replaced import() with readLocalJson()
       const mockData = readLocalJson(`${src.name}.json`)
       if (mockData) {
         const normalized =
@@ -240,7 +240,6 @@ export async function fetchAllSources() {
 export async function storeToDatabase(entries = [], type = 'umk') {
   for (const item of entries) {
     try {
-      // Resolve city name (e.g., "Jakarta") to city UUID
       let cityId = item.cityId
       if (!cityId.includes('-')) { // Simple check if it's a name, not UUID
         const city = await prisma.city.findFirst({
@@ -321,7 +320,6 @@ export async function autoSync(type = 'living_cost') {
 
   let rawResults = []
   if (type === 'umk') {
-    // ✅ FIX: Replaced import() with readLocalJson()
     const mockData = readLocalJson(`umk_${CURRENT_YEAR}.json`)
     if (mockData) {
       rawResults = [{ source: 'kemnaker_manual', type: 'umk', data: mockData }]

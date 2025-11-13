@@ -12,7 +12,7 @@ All commits follow the [Conventional Commits](./docs/commit-guide.md) standard.
 
 ---
 
-## v0.1.0 – 2025-10-22
+## v0.1.0
 
 ### Features
 

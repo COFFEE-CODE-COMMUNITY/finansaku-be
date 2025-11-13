@@ -24,7 +24,6 @@ describe('Auth API', () => {
   beforeAll(() => console.log('🚀 Starting Auth API tests...'))
 
   beforeEach(async () => {
-    // Fix: Delete dependent records first to avoid foreign key constraint violations
     await prisma.sakuAllocation.deleteMany()
     await prisma.sakuDetail.deleteMany() // <-- ADDED THIS LINE
     await prisma.saku.deleteMany()
