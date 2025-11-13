@@ -1,23 +1,33 @@
 name: Deploy FinanSaku Backend
 
 on:
-  push:
-    branches:
-      - dev-a
+    push:
+        branches: [dev, dev-a, dev-b, main] # bebas: tambahkan branch yang mau auto-deploy
+    workflow_dispatch:
+        inputs:
+            branch:
+                description: "Branch to deploy (override)"
+                required: false
+                default: ""
 
 jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
+    deploy:
+        runs-on: ubuntu-latest
+        env:
+            # Jika manual run berisi input, pakai itu; kalau tidak, pakai nama branch dari push
+            BRANCH: ${{ github.event.inputs.branch != '' && github.event.inputs.branch || github.ref_name }}
+        steps:
+            - uses: actions/checkout@v4
 
-      - name: SSH into VM and deploy
-        uses: appleboy/ssh-action@v0.1.10
-        with:
-          host: ${{ secrets.VM_HOST }}
-          username: ${{ secrets.VM_USER }}
-          key: ${{ secrets.VM_SSH_KEY }}
-          script: |
-            cd ~/finansaku
-            ./scripts/deploy.sh
+            - name: SSH into VM and deploy
+              uses: appleboy/ssh-action@v0.1.10
+              with:
+                  host: ${{ secrets.VM_HOST }}
+                  username: ${{ secrets.VM_USER }}
+                  key: ${{ secrets.VM_SSH_KEY }}
+                  script: |
+                      set -e
+                      cd ~/finansaku
+                      echo "Deploying branch: ${BRANCH}"
+                      # pass var ke deploy.sh juga biar konsisten
+                      BRANCH="${BRANCH}" ./scripts/deploy.sh
