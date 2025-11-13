@@ -71,12 +71,6 @@ const config = {
   RATE_LIMIT_GLOBAL: process.env.RATE_LIMIT_GLOBAL?.trim(),
   RATE_LIMIT_AUTH: process.env.RATE_LIMIT_AUTH?.trim(),
   RATE_LIMIT_WINDOW_MS: process.env.RATE_LIMIT_WINDOW_MS?.trim(),
-
-  // === Aggregator Service ===
-  AGGREGATOR_ENABLE_CRON: process.env.AGGREGATOR_ENABLE_CRON?.trim(),
-  AGGREGATOR_CRON_EXPRESSION: process.env.AGGREGATOR_CRON_EXPRESSION?.trim(),
-  BPS_API_KEY: process.env.BPS_API_KEY?.trim(),
-  AGGREGATOR_SOURCES: process.env.AGGREGATOR_SOURCES?.trim(),
 }
 
 export default config

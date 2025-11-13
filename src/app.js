@@ -23,7 +23,7 @@ import logger from './config/logger.js'
 import surveyRoutes from "./routes/survey.routes.js"
 import { redis, isRedisEnabled } from './config/redis.js'
 import config from './config/index.js'
-import { registerAggregatorCron } from './jobs/aggregator.cron.js'
+// import { registerAggregatorCron } from './jobs/aggregator.cron.js' // <-- REMOVED
 import './config/prisma.js'
 
 // === Initialize Express App ===
@@ -97,9 +97,6 @@ app.use('/api/v1/dashboard', authenticate, dashboardRoutes)
 app.use('/api/v1/history', authenticate, historyRoutes)
 app.use('/api/v1', systemRoutes)
 app.use('/api/v1/survey', surveyRoutes)
-
-// === Cron Job Registration (after Prisma is ready) ===
-registerAggregatorCron()
 
 // === Global Error Handling ===
 app.use(errorHandler)
