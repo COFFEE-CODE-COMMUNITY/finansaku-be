@@ -1,12 +1,15 @@
 import { HistoryService } from '../services/history.service.js'
-import { HistoryQueryDto } from '../modules/history.dto.js'
+// We no longer need HistoryQueryDto
 
 const service = new HistoryService()
 
 export const getHistory = async (req, res, next) => {
   try {
-    const dto = new HistoryQueryDto(req.query).validate()
-    const result = await service.getUserHistory(req.user.id, dto)
+    // Get the user ID from the authenticate middleware
+    const userId = req.user.id
+
+    // Call the service with just the userId
+    const result = await service.getUserHistory(userId)
 
     res.json({ ok: true, ...result })
   } catch (err) {

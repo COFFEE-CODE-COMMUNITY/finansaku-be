@@ -23,27 +23,28 @@ export class DashboardService {
 
     if (!saku) {
       return {
-        totalBalance: 0,
-        totalTransactions: 0,
+        // === REVISED ===
+        totalIncome: 0,
+        totalBudgeted: 0,
         activeSakus,
         unreadNotifications,
         categories: [],
       }
     }
 
-    const totalBalance = Number(saku.salary) || 0
-    const totalTransactions = saku.allocations.length
-    const totalAllocation = saku.allocations.reduce((sum, a) => sum + Number(a.amount), 0)
+    const totalIncome = Number(saku.salary) || 0
+
+    const totalBudgeted = saku.allocations.reduce((sum, a) => sum + Number(a.amount), 0)
 
     const categories = saku.allocations.map((a) => ({
       category: a.category?.name || "Tidak diketahui",
       amount: Number(a.amount),
-      percentage: totalAllocation === 0 ? "0.00" : ((Number(a.amount) / totalAllocation) * 100).toFixed(2),
+      percentage: totalBudgeted === 0 ? "0.00" : ((Number(a.amount) / totalBudgeted) * 100).toFixed(2),
     }))
 
     return {
-      totalBalance,
-      totalTransactions,
+      totalIncome,
+      totalBudgeted,
       activeSakus,
       unreadNotifications,
       categories,
