@@ -15,7 +15,7 @@ export const livingCost = {
   name: 'livingcost',
 
   async fetchLivingCost(year) {
-    const CSV_FILE_NAME = `living_cost_${year}.csv`
+    const CSV_FILE_NAME = `living_cost.csv`
     const csvPath = path.join(CSV_DIR, CSV_FILE_NAME)
 
     const csv = await fs.readFile(csvPath, 'utf8').catch(() => {
