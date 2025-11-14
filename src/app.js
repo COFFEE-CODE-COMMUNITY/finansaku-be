@@ -39,6 +39,7 @@ app.use(express.json({ limit: "1mb" }))
 app.use(cookieParser())
 app.use(requestLogger)
 app.use(ipBlocker)
+app.use(express.static('public'))
 logger.info("✅ FinanSaku backend starting...")
 
 // === CORS Configuration ===
