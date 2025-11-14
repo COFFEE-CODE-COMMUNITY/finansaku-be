@@ -23,8 +23,7 @@ export class DashboardService {
 
     if (!saku) {
       return {
-        // === REVISED ===
-        totalIncome: 0,
+        currentMonthlyIncome: 0,
         totalBudgeted: 0,
         activeSakus,
         unreadNotifications,
@@ -32,7 +31,7 @@ export class DashboardService {
       }
     }
 
-    const totalIncome = Number(saku.salary) || 0
+    const currentMonthlyIncome = Number(saku.salary) || 0
 
     const totalBudgeted = saku.allocations.reduce((sum, a) => sum + Number(a.amount), 0)
 
@@ -43,7 +42,7 @@ export class DashboardService {
     }))
 
     return {
-      totalIncome,
+      currentMonthlyIncome,
       totalBudgeted,
       activeSakus,
       unreadNotifications,
@@ -61,7 +60,7 @@ async getTrendDataPerCategory(userId) {
       dates.push({
         month: d.getMonth() + 1,
         year: d.getFullYear(),
-        monthName: d.toLocaleString('id-ID', { month: 'short' }),
+        monthName: d.toLocaleString('id-ID', { month: 'long' }),
       });
     }
     const monthLabels = dates.map(d => d.monthName)
@@ -89,7 +88,7 @@ async getTrendDataPerCategory(userId) {
     })
 
     // 3. Proses data
-
+    
     // 3a. Kumpulkan kategori unik
     const categoriesMap = new Map()
     for (const saku of sakus) {
@@ -107,7 +106,7 @@ async getTrendDataPerCategory(userId) {
       const dataPoints = []
       for (const date of dates) {
         const saku = sakus.find(s => s.month === date.month && s.year === date.year)
-
+        
         let amount = 0
         if (saku) {
           const allocation = saku.allocations.find(a => a.categoryId === categoryId)
@@ -116,7 +115,7 @@ async getTrendDataPerCategory(userId) {
           }
         }
         dataPoints.push(amount)
-      }
+      } 
       categoryData.push({
         name: categoryName,
         data: dataPoints, // Hasil: [0, 0, 4000000]
@@ -153,8 +152,8 @@ async getTrendDataPerCategory(userId) {
 
     // 4. Kembalikan data yang sudah dipangkas
     return {
-      months: finalMonths,
-      categories: finalCategories,
+      months: finalMonths, 
+      categories: finalCategories, 
     }
   }
 

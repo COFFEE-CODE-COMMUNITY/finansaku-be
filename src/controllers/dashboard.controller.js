@@ -13,14 +13,15 @@ export const getUserDashboard = async (req, res, next) => {
     const summaryData = await service.getDashboardData(userId)
 
     // 2. SETELAH alokasi ada, jalankan 'getTrendDataPerCategory'
-    const trendData = await service.getTrendDataPerCategory(userId)
+    const trendData = await service.getTrendDataPerCategory(userId) 
 
     // 3. Gabungkan hasilnya menjadi satu objek data
     const responseData = {
       // Ambil data summary dari 'summaryData'
       summary: {
-        totalIncome: summaryData.totalIncome,
-        totalBudgeted: summaryData.totalBudgeted,
+        // === REVISED: Renamed field ===
+        currentMonthlyIncome: summaryData.currentMonthlyIncome,
+        totalBudgeted: summaryData.totalBudgeted, 
         activeSakus: summaryData.activeSakus,
         unreadNotifications: summaryData.unreadNotifications,
       },
@@ -28,11 +29,11 @@ export const getUserDashboard = async (req, res, next) => {
       monthlyCategories: summaryData.categories,
      
       // Ambil data line chart dari 'trendData'
-      categoryTrend: trendData
+      categoryTrend: trendData 
     }
 
     // 4. Kirim 'responseData' yang sudah digabung
-    res.json({ success: true, data: responseData })
+    res.json({ success: true, data: responseData }) 
    
 
   } catch (err) {
