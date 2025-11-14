@@ -123,7 +123,6 @@ model LivingCost {
   cityId    String   @map("city_id") @db.Uuid
   year      Int
   index     Decimal  @map("index") @db.Decimal(8, 2)
-  currency  String   @default("IDR") @db.VarChar(10)
   sourceUrl String?  @map("source_url")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
