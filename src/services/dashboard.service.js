@@ -8,11 +8,11 @@ export class DashboardService {
       where: { userId, readAt: null },
     })
 
-    const activeSakus = await prisma.saku.count({ where: { userId } });
+    const activeSakus = await prisma.saku.count({ where: { userId } })
 
-    const now = new Date();
-    const month = now.getMonth() + 1;
-    const year = now.getFullYear();
+    const now = new Date()
+    const month = now.getMonth() + 1
+    const year = now.getFullYear()
 
     let saku = await prisma.saku.findFirst({
       where: { userId, month, year },
@@ -38,7 +38,7 @@ export class DashboardService {
         { name: "Tabungan", percentage: 20 },
       ]
 
-      const sakuSalary = Number(saku.salary) || 0;
+      const sakuSalary = Number(saku.salary) || 0
 
       for (const d of defaults) {
         const category = await prisma.budgetCategory.upsert({
@@ -88,21 +88,20 @@ export class DashboardService {
     }
   } 
 
-  // Mengambil data tren PER KATEGORI untuk line chart (3 bulan terakhir)
-  async getTrendDataPerCategory(userId) {
+async getTrendDataPerCategory(userId) {
 
     // 1. Siapkan daftar 3 bulan terakhir (termasuk bulan ini)
-    const dates = [];
-    const now = new Date();
+    const dates = []
+    const now = new Date()
     for (let i = 2; i >= 0; i--) { // 2, 1, 0 = 3 bulan
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
       dates.push({
-        month: d.getMonth() + 1, // 1-based month (Jan = 1)
+        month: d.getMonth() + 1,
         year: d.getFullYear(),
-        monthName: d.toLocaleString('id-ID', { month: 'short' }), // "Okt", "Nov", "Des"
-      })
+        monthName: d.toLocaleString('id-ID', { month: 'short' }),
+      });
     }
-    const monthLabels = dates.map(d => d.monthName); // Hasil: ["Sep", "Okt", "Nov"]
+    const monthLabels = dates.map(d => d.monthName)
 
     // 2. Query semua Saku & Alokasinya & Kategorinya dalam 3 bulan terakhir
     const sakus = await prisma.saku.findMany({
@@ -120,59 +119,79 @@ export class DashboardService {
           },
         },
       },
-      orderBy: [ 
+      orderBy: [
         { year: 'asc' },
         { month: 'asc' }
       ]
     })
 
     // 3. Proses data
-    // 3a. Kumpulkan dulu semua kategori unik dari 3 bulan ini
-    const categoriesMap = new Map();
+    
+    // 3a. Kumpulkan kategori unik
+    const categoriesMap = new Map()
     for (const saku of sakus) {
       for (const alloc of saku.allocations) {
         if (alloc.category) {
-          // Simpan Kategori berdasarkan ID agar unik
-          categoriesMap.set(alloc.category.id, alloc.category.name);
+          categoriesMap.set(alloc.category.id, alloc.category.name)
         }
       }
     }
 
     // 3b. Buat struktur data final untuk chart
-    const categoryData = [];
+    const categoryData = []
 
-    // Untuk setiap kategori unik (Makan, Transportasi, ...)
     for (const [categoryId, categoryName] of categoriesMap.entries()) {
-      
-      const dataPoints = []; 
-      
-      // Cek datanya untuk setiap bulan (Sep, Okt, Nov)
+      const dataPoints = []
       for (const date of dates) {
-        // Cari Saku yang cocok untuk bulan & tahun ini
-        const saku = sakus.find(s => s.month === date.month && s.year === date.year);
+        const saku = sakus.find(s => s.month === date.month && s.year === date.year)
         
-        let amount = 0; // Default 0 jika tidak ada data
+        let amount = 0
         if (saku) {
-          // Cari alokasi untuk kategori ini di dalam Saku bulan ini
-          const allocation = saku.allocations.find(a => a.categoryId === categoryId);
+          const allocation = saku.allocations.find(a => a.categoryId === categoryId)
           if (allocation) {
-            amount = Number(allocation.amount);
+            amount = Number(allocation.amount)
           }
         }
-        dataPoints.push(amount);
-      } // Selesai loop 3 bulan
-
-      // Masukkan hasilnya
+        dataPoints.push(amount)
+      } 
       categoryData.push({
         name: categoryName,
-        data: dataPoints, // Hasil: [750000, 700000, 800000]
+        data: dataPoints, // Hasil: [0, 0, 4000000]
       })
     }
 
-    // 4. Kembalikan data 
+    // 3c. Cari indeks bulan pertama yang ada datanya
+    let firstDataIndex = 0 // Default: mulai dari indeks 0
+
+    if (categoryData.length > 0) {
+      // Kita cek 2 bulan pertama (indeks 0 dan 1)
+      for (let i = 0; i < monthLabels.length - 1; i++) {
+        // Cek apakah SEMUA kategori punya data 0 di bulan ini
+        const allCategoriesAreZero = categoryData.every(category => {
+          return category.data[i] === 0
+        })
+
+        if (allCategoriesAreZero) {
+          // Jika semua 0, lewati bulan ini. Pindahkan indeks awal
+          firstDataIndex = i + 1
+        } else {
+          // Jika ada 1 saja datamulai dari sini
+          break
+        }
+      }
+    }
+
+    // 3d. Pangkas (slice) array berdasarkan indeks
+    const finalMonths = monthLabels.slice(firstDataIndex)
+    const finalCategories = categoryData.map(category => ({
+      name: category.name,
+      data: category.data.slice(firstDataIndex)
+    }))
+
+    // 4. Kembalikan data yang sudah dipangkas
     return {
-      months: monthLabels,   // Hasil: ["Sep", "Okt", "Nov"]
-      categories: categoryData, // Hasil: [ { name: "Makan", data: [...] }, { name: "Transportasi", data: [...] } ]
+      months: finalMonths, 
+      categories: finalCategories, 
     }
   }
 
