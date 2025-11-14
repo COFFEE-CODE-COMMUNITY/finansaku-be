@@ -13,33 +13,29 @@ export const getUserDashboard = async (req, res, next) => {
     const summaryData = await service.getDashboardData(userId)
 
     // 2. SETELAH alokasi ada, jalankan 'getTrendDataPerCategory'
-    const trendData = await service.getTrendDataPerCategory(userId) 
+    const trendData = await service.getTrendDataPerCategory(userId)
 
     // 3. Gabungkan hasilnya menjadi satu objek data
     const responseData = {
       // Ambil data summary dari 'summaryData'
       summary: {
-        // === REVISED: Renamed field ===
         currentMonthlyIncome: summaryData.currentMonthlyIncome,
-        totalBudgeted: summaryData.totalBudgeted, 
+        totalBudgeted: summaryData.totalBudgeted,
         activeSakus: summaryData.activeSakus,
         unreadNotifications: summaryData.unreadNotifications,
       },
       // Ambil data pie/bar chart dari 'summaryData'
       monthlyCategories: summaryData.categories,
-     
+
       // Ambil data line chart dari 'trendData'
-      categoryTrend: trendData 
+      categoryTrend: trendData
     }
 
     // 4. Kirim 'responseData' yang sudah digabung
-    res.json({ success: true, data: responseData }) 
-   
+    res.json({ success: true, data: responseData })
 
   } catch (err) {
-    console.error("❌ Error in getUserDashboard:", err)
-    res
-      .status(500)
-      .json({ success: false, message: "Gagal memuat dashboard", error: err.message })
+    // Pass the error to the global errorHandler middleware
+    next(err)
   }
 }

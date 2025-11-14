@@ -118,7 +118,7 @@ export class SurveyService {
       },
       city: { id: city.id, name: city.name },
       details: [{ key: 'dependents', valueNumber: dependents }],
-      allocations: createdAllocations, // <-- ADDED allocations
+      allocations: createdAllocations,
     }
   }
 }
