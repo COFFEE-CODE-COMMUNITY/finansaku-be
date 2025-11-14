@@ -1,5 +1,5 @@
 import { generateRecommendedBudget } from '../services/budget/budget.service.js'
-import { prisma } from '../src/config/prisma.js'
+import { prisma } from '../config/prisma.js'
 
 // === Controller for handling the recommended budget generation ===
 export async function getRecommendedBudget(req, res) {

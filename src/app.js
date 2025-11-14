@@ -18,6 +18,7 @@ import dashboardRoutes from './routes/dashboard.routes.js'
 import historyRoutes from './routes/history.routes.js'
 import allocationRoutes from './routes/allocation.routes.js'
 import systemRoutes from './routes/system.routes.js'
+import budgetRoutes from './routes/budget.routes.js'
 
 import logger from './config/logger.js'
 import surveyRoutes from "./routes/survey.routes.js"
@@ -96,6 +97,7 @@ app.use('/api/v1/dashboard', authenticate, dashboardRoutes)
 app.use('/api/v1/history', authenticate, historyRoutes)
 app.use('/api/v1', systemRoutes)
 app.use('/api/v1/survey', surveyRoutes)
+app.use('/api/v1/budget', authenticate, budgetRoutes)
 
 // === Global Error Handling ===
 app.use(errorHandler)
