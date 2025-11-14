@@ -1,6 +1,4 @@
-import { PrismaClient } from "@prisma/client"
-
-const prisma = new PrismaClient()
+import { prisma } from "../config/prisma.js"
 
 export const findAll = async () => {
   return prisma.uMK.findMany() // Sesuaikan dengan nama model di Prisma (misal "uMK" atau "UMK")
