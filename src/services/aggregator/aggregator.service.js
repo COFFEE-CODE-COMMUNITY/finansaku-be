@@ -12,6 +12,7 @@ import { umk as umkAdapter } from './adapters/umk.adapter.js'
 
 // === Environment Variables ===
 const CURRENT_YEAR = new Date().getFullYear()
+const NASIONAL_CITY_ID = '00000000-0000-0000-0000-000000000001'
 
 // === Normalizers ===
 // Adapt already-normalized rows from adapters into the reconciler shape
@@ -25,7 +26,7 @@ function normalizeUMKData(source, raw, targetYear) {
       source,
       sourceUrl: row.sourceUrl || null,
     }))
-    .filter(item => item.cityId && Number.isFinite(item.amount) && item.amount > 0)
+    .filter(item => item.cityId && Number.isFinite(Number(item.amount)) && item.amount > 0)
 }
 
 function normalizeLivingCostData(source, raw, targetYear) {
@@ -33,9 +34,8 @@ function normalizeLivingCostData(source, raw, targetYear) {
 
   return raw
     .map(row => ({
-      country: String(row.country).trim(),
+      cityId: NASIONAL_CITY_ID,
       year: row.year || targetYear,
-      currency: row.currency || 'IDR',
 
       restaurantsPct: row.restaurantsPct ?? null,
       marketsPct: row.marketsPct ?? null,
@@ -48,7 +48,7 @@ function normalizeLivingCostData(source, raw, targetYear) {
 
       source,
     }))
-    .filter(item => item.country)
+    .filter(item => item.cityId)
 }
 
 // === Simplified reconciliation logic ===
@@ -130,6 +130,7 @@ export async function storeToDatabase(entries = [], type = 'umk', targetYear) {
           logger.warn(
             `[Aggregator] Skipping UMK entry: Could not find city ID for name "${item.cityId}"`
           )
+          failedCount++ // Count this as a failure
           continue
         }
 
@@ -141,7 +142,7 @@ export async function storeToDatabase(entries = [], type = 'umk', targetYear) {
         })
 
         if (existingRecord) {
-          if (existingRecord.amount.toNumber() !== item.amount) {
+          if (existingRecord.amount.toNumber() !== Number(item.amount)) {
             await prisma.uMK.update({
               where: { cityId_year: { cityId, year: item.year } },
               data: { amount: item.amount },
@@ -160,22 +161,22 @@ export async function storeToDatabase(entries = [], type = 'umk', targetYear) {
           createdCount++
         }
       } else if (type === 'living_cost') {
-        const country = item.country
+        const cityId = item.cityId // This will be NASIONAL_CITY_ID
         const year = item.year ?? targetYear
+        logCityId = cityId // Log the "Nasional" city ID
 
         const existingRecord = await prisma.livingCost.findUnique({
           where: {
-            country_year: {
-              country,
+            year_cityId: { 
               year,
+              cityId,
             },
           },
         })
 
         const buildData = src => ({
-          country,
+          cityId,
           year,
-          currency: src.currency || 'IDR',
 
           restaurantsPct: src.restaurantsPct ?? null,
           marketsPct: src.marketsPct ?? null,
@@ -209,7 +210,7 @@ export async function storeToDatabase(entries = [], type = 'umk', targetYear) {
 
           if (hasDiff) {
             await prisma.livingCost.update({
-              where: { country_year: { country, year } },
+              where: { year_cityId: { year, cityId } },
               data: buildData(item),
             })
             updatedCount++
@@ -226,7 +227,7 @@ export async function storeToDatabase(entries = [], type = 'umk', targetYear) {
       }
     } catch (err) {
       logger.error(
-        `[Aggregator] Failed storing ${type} (Key: ${item.cityId || item.country}): ${err.message}`
+        `[Aggregator] Failed storing ${type} (Key: ${item.cityId}): ${err.message}`
       )
       failedCount++
 
@@ -239,7 +240,7 @@ export async function storeToDatabase(entries = [], type = 'umk', targetYear) {
           chosenSource: item.source,
           confidence: item.confidence ?? 100,
           status: 'failed',
-          message: `Failed storing: ${err.message}`,
+          message: `Failed storing: ${err.message}`.substring(0, 1000),
         },
       })
     }
@@ -277,10 +278,12 @@ export async function autoSync(type = 'living_cost', targetYear = CURRENT_YEAR) 
         rawResults = [{ source: 'manual_csv_umk', type: 'umk', data: localData }]
       } else {
         logger.warn(`[Aggregator] No UMK dataset found for year ${targetYear}. Looking for umk_${targetYear}.csv`)
+        await storeToDatabase([], type, targetYear)
         return { createdCount: 0, updatedCount: 0, totalProcessed: 0, failedCount: 0 }
       }
     } catch (err) {
       logger.error(`[Aggregator] Failed to read UMK CSV: ${err.message}`)
+      await storeToDatabase([], type, targetYear) // Log failure
       return { createdCount: 0, updatedCount: 0, totalProcessed: 0, failedCount: 0 }
     }
   } else {
@@ -290,10 +293,12 @@ export async function autoSync(type = 'living_cost', targetYear = CURRENT_YEAR) 
         rawResults = [{ source: 'manual_csv_livingcost', type: 'living_cost', data: localData }]
       } else {
         logger.warn(`[Aggregator] No Living Cost data found for ${targetYear} in CSV.`)
+        await storeToDatabase([], type, targetYear)
         return { createdCount: 0, updatedCount: 0, totalProcessed: 0, failedCount: 0 }
       }
     } catch (err) {
       logger.error(`[Aggregator] Failed to read Living Cost CSV: ${err.message}`)
+      await storeToDatabase([], type, targetYear) // Log failure
       return { createdCount: 0, updatedCount: 0, totalProcessed: 0, failedCount: 0 }
     }
   }
@@ -301,7 +306,7 @@ export async function autoSync(type = 'living_cost', targetYear = CURRENT_YEAR) 
   const { umk, living_cost } = reconcileData(rawResults, targetYear)
   const result = type === 'umk' ? umk : living_cost
 
-  if (result.length) {
+  if (result && result.length > 0) {
     const counts = await storeToDatabase(result, type, targetYear)
 
     if (isRedisEnabled && redis?.isReady) {
@@ -322,6 +327,7 @@ export async function autoSync(type = 'living_cost', targetYear = CURRENT_YEAR) 
     return counts
   } else {
     logger.warn(`[Aggregator] No data reconciled for ${type}.`)
+    await storeToDatabase([], type, targetYear)
     return { createdCount: 0, updatedCount: 0, totalProcessed: 0, failedCount: 0 }
   }
 }
