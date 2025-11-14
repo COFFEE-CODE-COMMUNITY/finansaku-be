@@ -26,7 +26,7 @@ describe('Aggregator - partial failures across sources', () => {
 
   it('uses the successful source when another fails, stores rows, and writes logs', async () => {
     mockAutoSync.mockResolvedValue([
-      { cityId: 'ID-JB-Bandung', year: 2025, index: 132.4, currency: 'IDR', sourceUrl: 'mock://bps' }
+      { cityId: 'ID-JB-Bandung', year: 2025, index: 132.4, sourceUrl: 'mock://bps' }
     ])
 
     mockFetchAllSources.mockResolvedValue([
@@ -47,7 +47,7 @@ describe('Aggregator - partial failures across sources', () => {
 
     await prisma.livingCost.upsert({
       where: { cityId_year: { cityId: bandung.id, year: 2024 } },
-      create: { id: crypto.randomUUID(), cityId: bandung.id, year: 2024, index: 129.9, currency: 'IDR' },
+      create: { id: crypto.randomUUID(), cityId: bandung.id, year: 2024, index: 129.9 },
       update: { index: 129.9 },
     })
     

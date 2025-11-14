@@ -8,7 +8,7 @@ import { authenticate } from "../middlewares/auth.middleware.js"
 
 const router = express.Router()
 
-// --- helpers lokal (tanpa ubah file lain) ---
+// === helpers lokal (tanpa ubah file lain) ===
 const parseCookie = (req, name) => {
   if (req.cookies) return req.cookies[name]
   const raw = req.headers.cookie
@@ -94,7 +94,7 @@ const validateSurveyPayload = (req, res, next) => {
 const asyncHandler = (fn) => (req, res, next) =>
   Promise.resolve(fn(req, res, next)).catch(next)
 
-// --- routes ---
+// === routes ===
 router.post(
   "/submit",
   useTokenFromCookie,   // ambil token dari cookie kalau header kosong
