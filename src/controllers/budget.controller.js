@@ -1,24 +1,36 @@
-import { generateRecommendedBudget } from '../services/budget/budget.service.js'
-import { prisma } from '../config/prisma.js'
+import * as budgetService from '../services/budget.service.js'
+import { AppError } from '../middlewares/errorHandler.js'
 
 // === Controller for handling the recommended budget generation ===
-export async function getRecommendedBudget(req, res) {
-  const { userId, year, cityId } = req.query
-  try {
-    // Fetch user's UMK from the database (adjust according to your setup)
-    const userUMK = await prisma.saku.findFirst({
-      where: { userId, year },
-      select: { salary: true },
-    })
+export async function getRecommendedBudget(req, res, next) {
+  // === NEW: Get all inputs from survey query ===
+  const { cityId } = req.query
+  const year = parseInt(req.query.year, 10)
+  const salary = req.query.salary ? parseFloat(req.query.salary) : null
+  const dependents = req.query.dependents ? parseInt(req.query.dependents, 10) : 0
 
-    if (!userUMK) {
-      return res.status(404).json({ error: 'UMK data not found for the user.' })
+  try {
+    // === NEW: Validate all required inputs ===
+    if (!year || !cityId || !salary) {
+      throw new AppError(400, 'year, cityId, and salary query parameters are required.')
     }
 
-    // Generate the recommended budget
-    const recommendedBudget = await generateRecommendedBudget(userUMK.salary, year, cityId)
+    // Check if the parsed numbers are valid
+    if (isNaN(year) || isNaN(salary) || isNaN(dependents)) {
+      throw new AppError(400, 'Invalid input. year, salary, and dependents must be numbers.')
+    }
+
+    // === NEW: Call service with new survey parameters ===
+    const recommendedBudget = await budgetService.getRecommendedBudget(
+      year,
+      cityId,
+      salary,
+      dependents
+    )
+
     res.json(recommendedBudget)
   } catch (error) {
-    res.status(500).json({ error: error.message })
+    // Pass error to the global error handler
+    next(error)
   }
 }
