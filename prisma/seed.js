@@ -136,7 +136,7 @@ async function seedLivingCost() {
 }
 
 
-// === NEW: Function to seed 3-month test user ===
+// === Function to seed 3-month test user ===
 async function seedGuestUser() {
   console.log('🌱 Seeding test user "Guest User"...')
 
@@ -168,14 +168,13 @@ async function seedGuestUser() {
   const dependents = 1
   const year = 2025
   const budgetTemplate = {
-    "Makan": 1599166,
-    "Transportasi": 415454,
-    "Sewa": 665739,
-    "Utilitas": 168017,
-    "Pakaian": 112644,
-    "Gaya Hidup": 144286,
-    "Tabungan": 58853,
-    "Misc/Dan Lain-Lain": 1335840 // Surplus
+    "Makan": 1500000,
+    "Sewa": 1000000,
+    "Tabungan": 1000000,
+    "Gaya Hidup": 500000,
+    "Transportasi": 500000,
+    "Utilitas": 300000,
+    "Pakaian": 200000,
   }
   const totalBudget = Object.values(budgetTemplate).reduce((a, b) => a + b, 0)
   const testSalary = totalBudget // 5,000,000
@@ -184,9 +183,24 @@ async function seedGuestUser() {
 
   for (const month of monthsToSeed) {
     console.log(`Seeding Saku for ${user.name} for month ${month}/${year}...`)
-
-    const saku = await prisma.saku.create({
-      data: {
+    
+    // === Use upsert to prevent unique constraint errors ===
+    const saku = await prisma.saku.upsert({
+      where: {
+        userId_cityId_year_month: {
+          userId: user.id,
+          cityId: city.id,
+          year: year,
+          month: month,
+        }
+      },
+      update: { // If it exists, just update the salary and notes
+        salary: testSalary,
+        notes: `Saku seeder bulan ${month} (updated)`,
+        umkId: umk.id,
+      },
+      create: { // If it doesn't exist, create it
+        id: crypto.randomUUID(),
         userId: user.id,
         cityId: city.id,
         umkId: umk.id,
@@ -197,12 +211,29 @@ async function seedGuestUser() {
       }
     })
 
-    await prisma.sakuDetail.create({
-      data: {
-        sakuId: saku.id,
-        key: 'dependents',
-        valueNumber: dependents
-      }
+    // === Use upsert for SakuDetail as well ===
+    const existingDetail = await prisma.sakuDetail.findFirst({
+      where: { sakuId: saku.id, key: 'dependents' },
+    });
+
+    if (existingDetail) {
+      await prisma.sakuDetail.update({
+        where: { id: existingDetail.id },
+        data: { valueNumber: dependents },
+      });
+    } else {
+      await prisma.sakuDetail.create({
+        data: {
+          sakuId: saku.id,
+          key: 'dependents',
+          valueNumber: dependents
+        },
+      });
+    }
+
+    // Delete old allocations for this Saku before creating new ones
+    await prisma.sakuAllocation.deleteMany({
+      where: { sakuId: saku.id }
     })
 
     for (const [name, amount] of Object.entries(budgetTemplate)) {
@@ -216,6 +247,7 @@ async function seedGuestUser() {
         },
       })
 
+      // We still use createMany or simple create here since we deleted old ones
       await prisma.sakuAllocation.create({
         data: {
           id: crypto.randomUUID(),
@@ -229,7 +261,6 @@ async function seedGuestUser() {
   }
   console.log('✅ "Guest User" seeded with 3 months of data.')
 }
-
 
 // === Main Seeder Script ===
 async function main() {

@@ -82,14 +82,39 @@ export const login = async (req, res) => {
 
 export const me = async (req, res) => {
   try {
-    if (!req.user) return res.status(401).json({ success: false, message: 'Unauthorized' })
-    const safeUser = sanitizeUser(req.user)
+    // 1. Get user ID from middleware
+    if (!req.user?.id) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' })
+    }
+
+    // 2. Re-fetch user from DB, but include the latest Saku data
+    const userWithData = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      include: {
+        saku: { // Include the saku relation
+          orderBy: [ // Order to get the most recent one
+            { year: 'desc' },
+            { month: 'desc' }
+          ],
+          take: 1 // We only need one to prove they filled out the survey
+        }
+      }
+    })
+
+    // 3. Handle edge case where user is not found
+    if (!userWithData) {
+      return res.status(404).json({ success: false, message: 'User not found' })
+    }
+
+    // 4. Sanitize and send the complete user data
+    const safeUser = sanitizeUser(userWithData)
     res.status(200).json({
       success: true,
       message: 'Authenticated user fetched successfully',
-      data: safeUser,
+      data: safeUser, // This data now includes the 'saku' array
     })
-  } catch {
+  } catch (err) { 
+    log.error('ME_CONTROLLER_ERROR', err) // Add logging
     res.status(500).json({ success: false, message: 'Failed to fetch authenticated user' })
   }
 }
