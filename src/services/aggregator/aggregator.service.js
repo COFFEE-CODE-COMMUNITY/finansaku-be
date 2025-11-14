@@ -13,10 +13,6 @@ import { umk as umkAdapter } from './adapters/umk.adapter.js'
 // === Environment Variables ===
 const CURRENT_YEAR = new Date().getFullYear()
 
-// === Helper function to read local JSON data (for UMK) ===
-// REMOVED: function readLocalJson(fileName) { ... }
-// This function is removed as UMK will now use the new umk.adapter.js
-
 // === Normalizers ===
 // Adapt already-normalized rows from adapters into the reconciler shape
 function normalizeUMKData(source, raw, targetYear) {
@@ -35,52 +31,73 @@ function normalizeUMKData(source, raw, targetYear) {
 
 function normalizeLivingCostData(source, raw, targetYear) {
   if (!Array.isArray(raw)) return []
+
   return raw
     .map(row => ({
-      // normalizeLivingCostRow has already coerced types
+      // normalizeLivingCostRow has already coerced types & percentages
       country: String(row.country).trim(), // Use country as the key
       year: row.year || targetYear,        // Use targetYear as fallback
-      index: row.index,
-      sourceUrl: row.sourceUrl || null,
+      currency: row.currency || 'IDR',
+
+      avgNetSalary: row.avgNetSalary ?? null,
+      familyOfFourExclRent: row.familyOfFourExclRent ?? null,
+      singlePersonExclRent: row.singlePersonExclRent ?? null,
+
+      restaurantsPct: row.restaurantsPct ?? null,
+      marketsPct: row.marketsPct ?? null,
+      transportationPct: row.transportationPct ?? null,
+      utilitiesPct: row.utilitiesPct ?? null,
+      rentPct: row.rentPct ?? null,
+      clothingPct: row.clothingPct ?? null,
+      sportsLeisurePct: row.sportsLeisurePct ?? null,
+      buyApartmentPct: row.buyApartmentPct ?? null,
+
       source,
     }))
-    .filter(item => item.country && Number.isFinite(item.index) && item.index > 0)
+    .filter(item => item.country)
 }
 
 // === Simplified reconciliation logic ===
 function reconcileData(rawResults = [], targetYear) {
-  const buckets = { umk: new Map(), living_cost: new Map() }
+  const buckets = { umk: new Map() }
+  const livingCostEntries = []
 
   for (const { source, type, data } of rawResults) {
-    const normalized =
-      type === 'living_cost'
-        ? normalizeLivingCostData(source, data, targetYear)
-        : normalizeUMKData(source, data, targetYear)
+    if (type === 'living_cost') {
+      // For living_cost we trust the single CSV source:
+      const normalized = normalizeLivingCostData(source, data, targetYear)
+      // Optionally attach confidence
+      livingCostEntries.push(
+        ...normalized.map(entry => ({
+          ...entry,
+          confidence: 100,
+        }))
+      )
+      continue
+    }
 
-    const target = type === 'living_cost' ? buckets.living_cost : buckets.umk
+    // === UMK path (still uses voting/averaging) ===
+    const normalized = normalizeUMKData(source, data, targetYear)
+    const target = buckets.umk
 
     for (const entry of normalized) {
-      // Use country for living_cost key, cityId for umk key
-      const key =
-        type === 'living_cost'
-          ? `${entry.country.toLowerCase()}-${entry.year}`
-          : `${entry.cityId.toLowerCase()}-${entry.year}`
+      const key = `${entry.cityId.toLowerCase()}-${entry.year}`
 
       if (!target.has(key)) {
         target.set(key, {
           ...entry,
-          votes: [{ source, value: entry.amount ?? entry.index }],
+          votes: [{ source, value: entry.amount }],
         })
       } else {
         target.get(key).votes.push({
           source,
-          value: entry.amount ?? entry.index,
+          value: entry.amount,
         })
       }
     }
   }
 
-  const finalize = (map, kind) => {
+  const finalizeUMK = map => {
     const out = []
     for (const [, rec] of map) {
       const values = rec.votes
@@ -91,18 +108,15 @@ function reconcileData(rawResults = [], targetYear) {
       const avg = values.reduce((a, b) => a + b, 0) / values.length
       const confidence = 100 // Manual data is trusted
 
-      if (kind === 'umk') {
-        out.push({ ...rec, amount: Math.round(avg), confidence })
-      } else {
-        out.push({ ...rec, index: Math.round(avg * 100) / 100, confidence })
-      }
+      out.push({ ...rec, amount: Math.round(avg), confidence })
     }
     return out
   }
 
   return {
-    umk: finalize(buckets.umk, 'umk'),
-    living_cost: finalize(buckets.living_cost, 'living_cost'), // <-- fixed (was buckets.umk)
+    umk: finalizeUMK(buckets.umk),
+    // living_cost already normalized; no voting/averaging needed
+    living_cost: livingCostEntries,
   }
 }
 
@@ -160,32 +174,91 @@ export async function storeToDatabase(entries = [], type = 'umk', targetYear) {
           createdCount++
         }
       } else if (type === 'living_cost') {
-        // === LivingCost Storage (by Year only, matching new schema) ===
-        // The unique key is now just 'year'
+        // === LivingCost Storage (by country + year, with percentages) ===
+        const country = item.country
+        const year = item.year ?? targetYear
+
         const existingRecord = await prisma.livingCost.findUnique({
-          where: { year: item.year },
+          where: {
+            country_year: {
+              country,
+              year,
+            },
+          },
+        })
+
+        const buildData = src => ({
+          country,
+          year,
+          currency: src.currency || 'IDR',
+
+          avgNetSalary: src.avgNetSalary ?? null,
+          familyOfFourExclRent: src.familyOfFourExclRent ?? null,
+          singlePersonExclRent: src.singlePersonExclRent ?? null,
+
+          restaurantsPct: src.restaurantsPct ?? null,
+          marketsPct: src.marketsPct ?? null,
+          transportationPct: src.transportationPct ?? null,
+          utilitiesPct: src.utilitiesPct ?? null,
+          rentPct: src.rentPct ?? null,
+          clothingPct: src.clothingPct ?? null,
+          sportsLeisurePct: src.sportsLeisurePct ?? null,
+          buyApartmentPct: src.buyApartmentPct ?? null,
         })
 
         if (existingRecord) {
-          // If the index is different, update and count it.
-          if (existingRecord.index.toNumber() !== item.index) {
+          // Check if anything actually changed
+          const fieldsToCheck = [
+            'avgNetSalary',
+            'familyOfFourExclRent',
+            'singlePersonExclRent',
+            'restaurantsPct',
+            'marketsPct',
+            'transportationPct',
+            'utilitiesPct',
+            'rentPct',
+            'clothingPct',
+            'sportsLeisurePct',
+            'buyApartmentPct',
+          ]
+
+          let hasDiff = false
+          for (const field of fieldsToCheck) {
+            const oldVal = existingRecord[field]
+            const newVal = item[field]
+
+            const oldNum =
+              oldVal === null || oldVal === undefined
+                ? null
+                : oldVal.toNumber()
+            const newNum =
+              newVal === null || newVal === undefined
+                ? null
+                : Number(newVal)
+
+            if (oldNum !== newNum) {
+              hasDiff = true
+              break
+            }
+          }
+
+          if (hasDiff) {
             await prisma.livingCost.update({
-              where: { year: item.year },
-              data: {
-                index: item.index,
-                sourceUrl: item.sourceUrl || null,
+              where: {
+                country_year: {
+                  country,
+                  year,
+                },
               },
+              data: buildData(item),
             })
             updatedCount++
           }
         } else {
-          // Create new record
           await prisma.livingCost.create({
             data: {
               id: crypto.randomUUID(),
-              year: item.year,
-              index: item.index,
-              sourceUrl: item.sourceUrl || null,
+              ...buildData(item),
             },
           })
           createdCount++
