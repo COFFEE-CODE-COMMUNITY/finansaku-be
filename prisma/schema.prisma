@@ -351,17 +351,34 @@ model RefreshToken {
 }
 
 model LivingCost {
-  id        String   @id @default(uuid()) @map("id_living_cost") @db.Uuid
-  year      Int
-  index     Decimal  @db.Decimal(12, 2)
-  sourceUrl String?  @map("source_url")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id                    String   @id @default(uuid()) @map("id_living_cost") @db.Uuid
 
-  @@unique([year])
+  country               String   @db.VarChar(100)
+  year                  Int
+  currency              String   @db.VarChar(10)
+
+  avgNetSalary          Decimal? @db.Decimal(18, 2) @map("avg_net_salary")
+  familyOfFourExclRent  Decimal? @db.Decimal(18, 2) @map("family_of_four_excl_rent")
+  singlePersonExclRent  Decimal? @db.Decimal(18, 2) @map("single_person_excl_rent")
+
+  restaurantsPct        Decimal? @db.Decimal(5, 2)  @map("restaurants_pct")
+  marketsPct            Decimal? @db.Decimal(5, 2)  @map("markets_pct")
+  transportationPct     Decimal? @db.Decimal(5, 2)  @map("transportation_pct")
+  utilitiesPct          Decimal? @db.Decimal(5, 2)  @map("utilities_pct")
+  rentPct               Decimal? @db.Decimal(5, 2)  @map("rent_pct")
+  clothingPct           Decimal? @db.Decimal(5, 2)  @map("clothing_pct")
+  sportsLeisurePct      Decimal? @db.Decimal(5, 2)  @map("sports_leisure_pct")
+  buyApartmentPct       Decimal? @db.Decimal(5, 2)  @map("buy_apartment_pct")
+
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt      @map("updated_at")
+
+  @@unique([country, year])
+  @@index([country])
   @@index([year])
   @@map("living_cost")
 }
+
 
 model AggregatorLog {
   id           String   @id @default(uuid()) @map("id_aggregator_log") @db.Uuid
