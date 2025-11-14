@@ -4,49 +4,85 @@ import logger from '../config/logger.js'
 
 export const SystemController = {
   async manualSync(req, res) {
-    const type = req.query.type || 'living_cost'
+    // type: only allow 'umk' or 'living_cost', default to living_cost
+    const rawType = req.query.type
+    const type = rawType === 'umk' ? 'umk' : 'living_cost'
+
     const force = req.query.force === 'true'
-    const year = Number(req.query.year) || new Date().getFullYear()
+
+    // Parse year from query; fall back to current year if invalid/missing
+    const yearParam = Number(req.query.year)
+    const targetYear = Number.isFinite(yearParam)
+      ? yearParam
+      : new Date().getFullYear()
 
     try {
+      // Optional: force invalidation of cache for this type + year
       if (force) {
-        await delCache(`aggregator:${type}:${year}:*`)
-        logger.info(`🧩 [System] Force cache invalidation for ${type} ${year}`)
+        await delCache(`aggregator:${type}:${targetYear}:*`)
+        logger.info(
+          `🧩 [System] Force cache invalidation for ${type} ${targetYear}`
+        )
       }
 
-      logger.info(`🧩 [System] Manual aggregator sync triggered for ${type}`)
-      
-      // 1. Capture the result from the autoSync service
-      const result = await autoSync(type)
+      logger.info(
+        `🧩 [System] Manual aggregator sync triggered for ${type} (${targetYear})`
+      )
 
-      // 2. Check the result to provide a better message
-      if (!result) {
-        // This happens if the UMK .json file was missing
-        return res
-          .status(404)
-          .json({ success: false, message: `Aggregator ${type} sync failed: Source file or data not found.` })
-      }
+      // 👉 Pass targetYear into autoSync
+      const result = await autoSync(type, targetYear)
+      // result is now: { createdCount, updatedCount, totalProcessed, failedCount }
 
-      if (Array.isArray(result) && result.length === 0) {
-        // This happens if the file was found but was empty
-        return res
-          .status(200)
-          .json({ success: true, message: `Aggregator ${type} sync completed, but no new data was processed.` })
-      }
-
-      // 3. If data was processed, return the count
-      return res
-        .status(200)
-        .json({ 
-          success: true, 
-          message: `Aggregator ${type} sync completed successfully.`,
-          data: {
-            recordsProcessed: result.length
-          }
+      if (!result || typeof result !== 'object') {
+        return res.status(500).json({
+          success: false,
+          message: `Aggregator ${type} sync failed: unexpected result from service.`,
         })
+      }
+
+      const {
+        createdCount = 0,
+        updatedCount = 0,
+        totalProcessed = 0,
+        failedCount = 0,
+      } = result
+
+      const unchangedCount =
+        totalProcessed - createdCount - updatedCount - failedCount
+
+      // If literally nothing was processed, you might want a softer message
+      if (totalProcessed === 0) {
+        return res.status(200).json({
+          success: true,
+          message: `Aggregator ${type} sync completed for year ${targetYear}, but no data was processed.`,
+          data: {
+            year: targetYear,
+            created: createdCount,
+            updated: updatedCount,
+            unchanged: unchangedCount,
+            failed: failedCount,
+            totalProcessed,
+          },
+        })
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: `Aggregator ${type} sync completed successfully for year ${targetYear}.`,
+        data: {
+          year: targetYear,
+          created: createdCount,
+          updated: updatedCount,
+          unchanged: unchangedCount,
+          failed: failedCount,
+          totalProcessed,
+        },
+      })
     } catch (err) {
       const status = err.statusCode || 500
-      logger.error(`❌ [System] Manual ${type} sync failed: ${err.message}`)
+      logger.error(
+        `❌ [System] Manual ${type} sync failed for year ${targetYear}: ${err.message}`
+      )
       return res.status(status).json({
         success: false,
         message: `Aggregator ${type} sync failed`,
