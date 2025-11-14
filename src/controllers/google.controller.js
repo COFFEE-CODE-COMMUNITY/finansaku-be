@@ -62,9 +62,23 @@ export const googleRedirect = (req, res) => {
 // === Step 2: Handle Google callback ===
 export const googleCallback = async (req, res) => {
   try {
-    const { state, code } = req.query
+    const { state, code, error } = req.query // <-- EDITED: Added 'error'
     const stateCookie = req.cookies.oauth_state
     const isProduction = config.NODE_ENV === 'production'
+
+    // === NEW: Handle user cancellation (access_denied) or other errors FIRST ===
+    if (error) {
+      log.warn('[GOOGLE OAUTH] User cancelled or error received', { error })
+      if (isProduction) {
+        res.clearCookie('oauth_state')
+      } else if (state) {
+        // Clear dev state only if one was provided in the callback
+        devStateStore.delete(state)
+      }
+      // Redirect back to frontend, passing the error along
+      return res.redirect(`${config.CLIENT_WEB_REDIRECT}?error=${error}`)
+    }
+    // === END NEW BLOCK ===
 
     const valid = isProduction ? stateCookie && state === stateCookie : devStateStore.has(state)
 
