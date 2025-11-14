@@ -1,3 +1,4 @@
+// Normalize UMK row
 export function normalizeUMKRow(row) {
   return {
     cityName: row.cityName,
@@ -7,13 +8,12 @@ export function normalizeUMKRow(row) {
   }
 }
 
-// Corrected this function to use 'country' to match the Kaggle adapter
+// Normalize Living Cost row
 export function normalizeLivingCostRow(row) {
   return {
-    country: row.country, // <-- Was cityName
+    country: row.country,
     year: Number(row.year),
     index: Number(row.index),
-    currency: row.currency || 'IDR',
     sourceUrl: row.sourceUrl || null,
   }
 }
