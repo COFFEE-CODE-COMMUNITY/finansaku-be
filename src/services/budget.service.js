@@ -20,7 +20,7 @@ export async function getRecommendedBudget(year, cityId, userSalary, dependents)
   if (!umkData) {
     throw new AppError(404, 'UMK data not found for the selected city and year.')
   }
- 
+
   const umkAmount = umkData.amount.toNumber()
 
   // 2. Get the national living cost percentages
@@ -46,7 +46,7 @@ export async function getRecommendedBudget(year, cityId, userSalary, dependents)
   let utilitiesPct = pct(livingCost.utilitiesPct)
   let clothingPct = pct(livingCost.clothingPct)
   let leisurePct = pct(livingCost.sportsLeisurePct)
- 
+
   // Calculate base essential/non-essential split
   let essentialPct = foodPct + transportPct + rentPct + utilitiesPct
   let nonEssentialPct = clothingPct + leisurePct
@@ -57,19 +57,19 @@ export async function getRecommendedBudget(year, cityId, userSalary, dependents)
   const dependentFactor = 1 + (Math.max(0, dependents - 1) * 0.4)
   const originalFoodPct = foodPct
   foodPct = foodPct * dependentFactor
- 
+
   // The extra food cost comes out of savings, then leisure
   const adjustment = foodPct - originalFoodPct
   const originalSavingsPct = savingsPct
- 
+
   savingsPct = Math.max(0, savingsPct - adjustment)
- 
+
   // If savings went to 0, take the rest from non-essentials
   if (savingsPct === 0) {
     const remainingAdjustment = adjustment - originalSavingsPct
     const originalLeisurePct = leisurePct
     leisurePct = Math.max(0, leisurePct - remainingAdjustment)
-   
+
     // If leisure also went to 0, take from clothing
     if (leisurePct === 0) {
       const finalAdjustment = remainingAdjustment - originalLeisurePct
@@ -93,7 +93,7 @@ export async function getRecommendedBudget(year, cityId, userSalary, dependents)
   if (userSalary < totalRecommendedExpenses) {
     // SURVIVAL BUDGET: User's salary is the new baseline.
     // We must "compress" the budget, prioritizing essentials.
-   
+
     const deficit = totalRecommendedExpenses - userSalary
     surplus = 0 // No surplus in this case
 
@@ -102,7 +102,6 @@ export async function getRecommendedBudget(year, cityId, userSalary, dependents)
 
     if (deficit <= cuttableAmount) {
       // Deficit is smaller than non-essentials. We can cut from them proportionally.
-      // === FIX: Guard against division by zero ===
       const scale = (cuttableAmount > 0) ? (cuttableAmount - deficit) / cuttableAmount : 0
       recClothing = recClothing * scale
       recLeisure = recLeisure * scale
@@ -112,20 +111,19 @@ export async function getRecommendedBudget(year, cityId, userSalary, dependents)
       recClothing = 0
       recLeisure = 0
       recSavings = 0
-      
+
       // We must now cut from essentials.
       const remainingDeficit = deficit - cuttableAmount
       const essentialAmount = recFood + recTransport + recRent + recUtilities
-      
+
       // Scale down all essentials proportionally
-      // === FIX: Guard against division by zero and negative scale ===
       const scale = (essentialAmount > 0) ? Math.max(0, (essentialAmount - remainingDeficit)) / essentialAmount : 0
       recFood = recFood * scale
       recTransport = recTransport * scale
       recRent = recRent * scale
       recUtilities = recUtilities * scale
     }
-   
+
     // Recalculate percentages based on the new "survival" amounts
     // === FIX: Guard against division by zero ===
     foodPct = (userSalary > 0) ? recFood / userSalary : 0
@@ -148,23 +146,23 @@ export async function getRecommendedBudget(year, cityId, userSalary, dependents)
     umkBaseline: umkAmount,
     dependents,
     recommendations: {
-      food: recFood.toFixed(0),
-      transport: recTransport.toFixed(0),
-      rent: recRent.toFixed(0),
-      utilities: recUtilities.toFixed(0),
-      clothing: recClothing.toFixed(0),
-      leisure: recLeisure.toFixed(0),
-      savings: recSavings.toFixed(0),
+      "Makan": recFood.toFixed(0),
+      "Transportasi": recTransport.toFixed(0),
+      "Sewa": recRent.toFixed(0), // "Rent"
+      "Utilitas": recUtilities.toFixed(0),
+      "Pakaian": recClothing.toFixed(0),
+      "Gaya Hidup": recLeisure.toFixed(0), // "Leisure"
+      "Tabungan": recSavings.toFixed(0),
     },
     surplus: surplus.toFixed(0),
     percentages: {
-      food: (foodPct * 100).toFixed(1),
-      transport: (transportPct * 100).toFixed(1),
-      rent: (rentPct * 100).toFixed(1),
-      utilities: (utilitiesPct * 100).toFixed(1),
-      clothing: (clothingPct * 100).toFixed(1),
-      leisure: (leisurePct * 100).toFixed(1),
-      savings: (savingsPct * 100).toFixed(1),
+      "Makan": (foodPct * 100).toFixed(1),
+      "Transportasi": (transportPct * 100).toFixed(1),
+      "Sewa": (rentPct * 100).toFixed(1),
+      "Utilitas": (utilitiesPct * 100).toFixed(1),
+      "Pakaian": (clothingPct * 100).toFixed(1),
+      "Gaya Hidup": (leisurePct * 100).toFixed(1),
+      "Tabungan": (savingsPct * 100).toFixed(1),
     }
   }
 }

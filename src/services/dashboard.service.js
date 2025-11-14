@@ -24,49 +24,11 @@ export class DashboardService {
     if (!saku) {
       return {
         totalBalance: 0,
-        totalTransactions: 0, 
+        totalTransactions: 0,
         activeSakus,
         unreadNotifications,
         categories: [],
       }
-    }
-
-    if (!saku.allocations || saku.allocations.length === 0) {
-      const defaults = [
-        { name: "Makan", percentage: 50 },
-        { name: "Transportasi", percentage: 30 },
-        { name: "Tabungan", percentage: 20 },
-      ]
-
-      const sakuSalary = Number(saku.salary) || 0
-
-      for (const d of defaults) {
-        const category = await prisma.budgetCategory.upsert({
-          where: { userId_name: { userId: userId, name: d.name } },
-          update: {},
-          create: { 
-            userId: userId, 
-            name: d.name, 
-            defaultPercentage: d.percentage 
-          },
-        })
-
-        await prisma.sakuAllocation.create({
-          data: {
-            sakuId: saku.id,
-            categoryId: category.id,
-            percentage: d.percentage,
-            amount: (sakuSalary * d.percentage) / 100,
-          },
-        })
-      }
-
-      saku = await prisma.saku.findFirst({
-        where: { id: saku.id },
-        include: {
-          allocations: { include: { category: true } },
-        },
-      })
     }
 
     const totalBalance = Number(saku.salary) || 0
@@ -86,7 +48,7 @@ export class DashboardService {
       unreadNotifications,
       categories,
     }
-  } 
+  }
 
 async getTrendDataPerCategory(userId) {
 
@@ -126,7 +88,7 @@ async getTrendDataPerCategory(userId) {
     })
 
     // 3. Proses data
-    
+
     // 3a. Kumpulkan kategori unik
     const categoriesMap = new Map()
     for (const saku of sakus) {
@@ -144,7 +106,7 @@ async getTrendDataPerCategory(userId) {
       const dataPoints = []
       for (const date of dates) {
         const saku = sakus.find(s => s.month === date.month && s.year === date.year)
-        
+
         let amount = 0
         if (saku) {
           const allocation = saku.allocations.find(a => a.categoryId === categoryId)
@@ -153,7 +115,7 @@ async getTrendDataPerCategory(userId) {
           }
         }
         dataPoints.push(amount)
-      } 
+      }
       categoryData.push({
         name: categoryName,
         data: dataPoints, // Hasil: [0, 0, 4000000]
@@ -190,8 +152,8 @@ async getTrendDataPerCategory(userId) {
 
     // 4. Kembalikan data yang sudah dipangkas
     return {
-      months: finalMonths, 
-      categories: finalCategories, 
+      months: finalMonths,
+      categories: finalCategories,
     }
   }
 
