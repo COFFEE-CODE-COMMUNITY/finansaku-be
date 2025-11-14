@@ -6,7 +6,7 @@ const router = express.Router()
 router.get("/", sakuController.getAllSaku)
 router.get("/:id", sakuController.getSakuById)
 router.post("/", sakuController.createSaku)
-router.put("/:id", sakuController.updateSaku)
+router.patch("/:id", sakuController.updateSaku)
 router.delete("/:id", sakuController.deleteSaku)
 
 export default router
