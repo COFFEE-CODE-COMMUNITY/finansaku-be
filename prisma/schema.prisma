@@ -352,14 +352,8 @@ model RefreshToken {
 
 model LivingCost {
   id                    String   @id @default(uuid()) @map("id_living_cost") @db.Uuid
-
-  country               String   @db.VarChar(100)
+  cityId                String?  @map("city_id") @db.Uuid
   year                  Int
-  currency              String   @db.VarChar(10)
-
-  avgNetSalary          Decimal? @db.Decimal(18, 2) @map("avg_net_salary")
-  familyOfFourExclRent  Decimal? @db.Decimal(18, 2) @map("family_of_four_excl_rent")
-  singlePersonExclRent  Decimal? @db.Decimal(18, 2) @map("single_person_excl_rent")
 
   restaurantsPct        Decimal? @db.Decimal(5, 2)  @map("restaurants_pct")
   marketsPct            Decimal? @db.Decimal(5, 2)  @map("markets_pct")
@@ -373,12 +367,11 @@ model LivingCost {
   createdAt             DateTime @default(now()) @map("created_at")
   updatedAt             DateTime @updatedAt      @map("updated_at")
 
-  @@unique([country, year])
-  @@index([country])
+  @@unique([year, cityId])
   @@index([year])
+  @@index([cityId])
   @@map("living_cost")
 }
-
 
 model AggregatorLog {
   id           String   @id @default(uuid()) @map("id_aggregator_log") @db.Uuid

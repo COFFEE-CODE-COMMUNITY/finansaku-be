@@ -7,13 +7,18 @@ dotenv.config()
 // Helper function to create cities only if they don't exist
 async function seedCities(cityNames) {
   console.log(`Verifying ${cityNames.length} city names...`)
+
+  // Fetch existing cities to prevent duplicates
   const existingCities = await prisma.city.findMany({
     where: { name: { in: cityNames, mode: 'insensitive' } },
     select: { name: true },
   })
+
+  // Create a set of the existing cities for comparison
   const existingSet = new Set(existingCities.map(c => c.name.toLowerCase()))
 
   const newCities = []
+  // Add cities that are not in the existing set
   for (const name of cityNames) {
     if (!existingSet.has(name.toLowerCase())) {
       newCities.push({
@@ -24,6 +29,7 @@ async function seedCities(cityNames) {
   }
 
   if (newCities.length > 0) {
+    // Only create new cities if they don't already exist
     await prisma.city.createMany({ data: newCities })
     console.log(`🌱 Seeded ${newCities.length} new cities.`)
   } else {
@@ -109,6 +115,7 @@ async function main() {
     "Kabupaten Pulau Taliabu", "Kota Tidore Kepulauan", "Kabupaten Pulau Morotai"
   ]
 
+  // Seed all the cities
   await seedCities(allCityNames)
 
   // === Find a city for the demo user ===

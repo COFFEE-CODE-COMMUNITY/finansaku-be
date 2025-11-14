@@ -56,7 +56,7 @@ export default client
     await client.set(key, '1', { EX: 5 })
     await client.get(key)
     logger.info('✅ Redis probe OK')
-  } catch (err) {
+  } catch (err) { // eslint-disable-line no-unused-vars
     logger.warn('[Redis] Probe failed, fallback to in-memory cache')
   }
 })()
