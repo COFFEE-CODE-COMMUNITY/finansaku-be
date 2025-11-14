@@ -381,7 +381,7 @@ model AggregatorLog {
   chosenSource String?  @map("chosen_source") @db.VarChar(100)
   confidence   Decimal? @db.Decimal(5, 2)
   status       String   @default("success") @db.VarChar(20)
-  message      String?  @db.VarChar(255)
+  message      String?  @db.Text
   createdAt    DateTime @default(now()) @map("created_at")
   city         City?    @relation(fields: [cityId], references: [id])
 

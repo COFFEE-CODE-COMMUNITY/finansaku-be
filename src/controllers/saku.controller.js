@@ -24,12 +24,24 @@ export const getSakuById = async (req, res) => {
 
 export const createSaku = async (req, res) => {
   try {
+    const userId = req.user?.id
+    if (!userId) {
+      return fail(res, "Unauthorized: User ID not found in session", 401)
+    }
+
     if (!req.body) return fail(res, "Missing request body", 422)
-    const newSaku = await sakuService.create(req.body)
-    return success(res, "Saku created successfully", newSaku, 201)
+
+    const { saku, wasCreated } = await sakuService.create(userId, req.body)
+
+    if (wasCreated) {
+      return success(res, "Saku created successfully", saku, 201)
+    } else {
+      return success(res, "Saku updated successfully", saku, 200)
+    }
+
   } catch (error) {
     const status = error.statusCode || 400
-    return fail(res, error.message || "Failed to create saku", status)
+    return fail(res, error.message || "Failed to create or update saku", status)
   }
 }
 

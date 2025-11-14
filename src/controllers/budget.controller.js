@@ -1,24 +1,44 @@
-import { generateRecommendedBudget } from '../services/budget/budget.service.js'
-import { prisma } from '../config/prisma.js'
+import { DashboardService } from '../services/dashboard.service.js'
 
-// === Controller for handling the recommended budget generation ===
-export async function getRecommendedBudget(req, res) {
-  const { userId, year, cityId } = req.query
+const service = new DashboardService()
+
+export const getUserDashboard = async (req, res, next) => {
   try {
-    // Fetch user's UMK from the database (adjust according to your setup)
-    const userUMK = await prisma.saku.findFirst({
-      where: { userId, year },
-      select: { salary: true },
-    })
-
-    if (!userUMK) {
-      return res.status(404).json({ error: 'UMK data not found for the user.' })
+    const userId = req.user?.id
+    if (!userId) {
+      return res.status(401).json({ ok: false, message: "Unauthorized" })
     }
 
-    // Generate the recommended budget
-    const recommendedBudget = await generateRecommendedBudget(userUMK.salary, year, cityId)
-    res.json(recommendedBudget)
-  } catch (error) {
-    res.status(500).json({ error: error.message })
+    // 1. Jalankan 'getDashboardData'
+    const summaryData = await service.getDashboardData(userId)
+
+    // 2. SETELAH alokasi ada, jalankan 'getTrendDataPerCategory'
+    const trendData = await service.getTrendDataPerCategory(userId)
+
+    // 3. Gabungkan hasilnya menjadi satu objek data
+    const responseData = {
+      // Ambil data summary dari 'summaryData'
+      summary: {
+        totalIncome: summaryData.totalIncome,
+        totalBudgeted: summaryData.totalBudgeted,
+        activeSakus: summaryData.activeSakus,
+        unreadNotifications: summaryData.unreadNotifications,
+      },
+      // Ambil data pie/bar chart dari 'summaryData'
+      monthlyCategories: summaryData.categories,
+
+      // Ambil data line chart dari 'trendData'
+      categoryTrend: trendData
+    }
+
+    // 4. Kirim 'responseData' yang sudah digabung
+    res.json({ success: true, data: responseData })
+
+
+  } catch (err) {
+    console.error("❌ Error in getUserDashboard:", err)
+    res
+      .status(500)
+      .json({ success: false, message: "Gagal memuat dashboard", error: err.message })
   }
 }

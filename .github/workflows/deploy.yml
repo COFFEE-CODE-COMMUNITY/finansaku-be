@@ -1,0 +1,26 @@
+name: Deploy FinanSaku Backend
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: SSH into VM and deploy
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          # yamllint disable-line rule:truthy
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          script: |
+            cd ~/finansaku
+            # Pass the branch name (e.li., "main" or "dev") to the script
+            ./scripts/deploy.sh ${{ github.ref_name }}
