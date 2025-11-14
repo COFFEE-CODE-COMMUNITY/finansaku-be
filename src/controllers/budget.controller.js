@@ -1,36 +1,44 @@
-import * as budgetService from '../services/budget.service.js'
-import { AppError } from '../middlewares/errorHandler.js'
+import { DashboardService } from '../services/dashboard.service.js'
 
-// === Controller for handling the recommended budget generation ===
-export async function getRecommendedBudget(req, res, next) {
-  // === NEW: Get all inputs from survey query ===
-  const { cityId } = req.query
-  const year = parseInt(req.query.year, 10)
-  const salary = req.query.salary ? parseFloat(req.query.salary) : null
-  const dependents = req.query.dependents ? parseInt(req.query.dependents, 10) : 0
+const service = new DashboardService()
 
+export const getUserDashboard = async (req, res, next) => {
   try {
-    // === NEW: Validate all required inputs ===
-    if (!year || !cityId || !salary) {
-      throw new AppError(400, 'year, cityId, and salary query parameters are required.')
+    const userId = req.user?.id
+    if (!userId) {
+      return res.status(401).json({ ok: false, message: "Unauthorized" })
     }
 
-    // Check if the parsed numbers are valid
-    if (isNaN(year) || isNaN(salary) || isNaN(dependents)) {
-      throw new AppError(400, 'Invalid input. year, salary, and dependents must be numbers.')
+    // 1. Jalankan 'getDashboardData'
+    const summaryData = await service.getDashboardData(userId)
+
+    // 2. SETELAH alokasi ada, jalankan 'getTrendDataPerCategory'
+    const trendData = await service.getTrendDataPerCategory(userId)
+
+    // 3. Gabungkan hasilnya menjadi satu objek data
+    const responseData = {
+      // Ambil data summary dari 'summaryData'
+      summary: {
+        totalIncome: summaryData.totalIncome,
+        totalBudgeted: summaryData.totalBudgeted,
+        activeSakus: summaryData.activeSakus,
+        unreadNotifications: summaryData.unreadNotifications,
+      },
+      // Ambil data pie/bar chart dari 'summaryData'
+      monthlyCategories: summaryData.categories,
+
+      // Ambil data line chart dari 'trendData'
+      categoryTrend: trendData
     }
 
-    // === NEW: Call service with new survey parameters ===
-    const recommendedBudget = await budgetService.getRecommendedBudget(
-      year,
-      cityId,
-      salary,
-      dependents
-    )
+    // 4. Kirim 'responseData' yang sudah digabung
+    res.json({ success: true, data: responseData })
 
-    res.json(recommendedBudget)
-  } catch (error) {
-    // Pass error to the global error handler
-    next(error)
+
+  } catch (err) {
+    console.error("❌ Error in getUserDashboard:", err)
+    res
+      .status(500)
+      .json({ success: false, message: "Gagal memuat dashboard", error: err.message })
   }
 }
