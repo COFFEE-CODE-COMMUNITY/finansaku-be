@@ -35,48 +35,30 @@ export class DashboardService {
 
     const totalBudgeted = saku.allocations.reduce((sum, a) => sum + Number(a.amount), 0)
 
-    // === Group into Makan, Utilitas, Tabungan + Dan Lainnya ===
-    const priorityCategories = ["Makan", "Utilitas", "Tabungan"];
-    const finalCategories = [];
-    let otherAmount = 0;
+    const sortedAllocations = saku.allocations
+      .map((a) => ({
+        name: a.category?.name || "Tidak diketahui",
+        amount: Number(a.amount),
+      }))
+      .sort((a, b) => b.amount - a.amount); // Sort descending by amount
 
-    // Initialize priority categories so they always appear, even if 0
-    const categoryMap = new Map();
-    for (const name of priorityCategories) {
-      categoryMap.set(name, {
-        category: name,
-        amount: 0,
-      });
-    }
+    const top3 = sortedAllocations.slice(0, 3);
+    const others = sortedAllocations.slice(3);
 
-    // Process all allocations
-    for (const a of saku.allocations) {
-      const name = a.category?.name || "Tidak diketahui";
-      const amount = Number(a.amount);
+    const otherAmount = others.reduce((sum, cat) => sum + cat.amount, 0);
 
-      if (categoryMap.has(name)) {
-        // It's a priority category, update its amount
-        categoryMap.get(name).amount += amount;
-      } else {
-        // It's not a priority category, add to "Others"
-        otherAmount += amount;
-      }
-    }
-
-    // Add the priority categories to the final list
-    for (const cat of categoryMap.values()) {
-      finalCategories.push({
-        ...cat,
-        percentage: totalBudgeted === 0 ? "0.00" : ((cat.amount / totalBudgeted) * 100).toFixed(2),
-      });
-    }
+    const categories = top3.map((a) => ({
+      category: a.name,
+      amount: a.amount,
+      percentage: totalBudgeted === 0 ? "0.00" : ((a.amount / totalBudgeted) * 100).toFixed(2),
+    }));
 
     // Add the "Dan Lainnya" category if it has any value
-    if (otherAmount > 0) {
-      finalCategories.push({
+    if (otherAmount > 0 && totalBudgeted > 0) {
+      categories.push({
         category: "Dan Lainnya",
         amount: otherAmount,
-        percentage: totalBudgeted === 0 ? "0.00" : ((otherAmount / totalBudgeted) * 100).toFixed(2),
+        percentage: ((otherAmount / totalBudgeted) * 100).toFixed(2),
       });
     }
 
@@ -85,7 +67,7 @@ export class DashboardService {
       totalBudgeted,
       activeSakus,
       unreadNotifications,
-      categories: finalCategories,
+      categories, // This is now the grouped array
     }
   }
 
@@ -127,36 +109,34 @@ async getTrendDataPerCategory(userId) {
     })
 
     // 3. Proses data
-    // === Process each month to aggregate Makan, Utilitas, Tabungan + Misc ===
-    const priorityCategories = ["Makan", "Utilitas", "Tabungan"];
     const categoriesMap = new Map(); // Will store all unique category names (e.g., "Makan", "Dan Lainnya")
-    priorityCategories.forEach(name => categoriesMap.set(name, name)); // Pre-populate priority categories
-
     const monthlyAggregatedData = new Map(); // Key: "YYYY-MM", Value: Map("CategoryName" -> amount)
 
     for (const saku of sakus) {
       const monthKey = `${saku.year}-${saku.month}`;
       const monthlyCategories = new Map(); // Stores the final amounts for THIS month
 
-      // Ensure priority categories exist for this month
-      priorityCategories.forEach(name => monthlyCategories.set(name, 0));
+      const sortedAllocations = saku.allocations
+        .map(a => ({
+          name: a.category?.name || "Tidak diketahui",
+          amount: Number(a.amount),
+        }))
+        .sort((a, b) => b.amount - a.amount); // Sort descending
 
-      let otherAmount = 0;
+      const top3 = sortedAllocations.slice(0, 3);
+      const others = sortedAllocations.slice(3);
+      const otherAmount = others.reduce((sum, cat) => sum + cat.amount, 0);
 
-      for (const a of saku.allocations) {
-        const name = a.category?.name || "Tidak diketahui";
-        const amount = Number(a.amount);
-
-        if (priorityCategories.includes(name)) {
-          monthlyCategories.set(name, (monthlyCategories.get(name) || 0) + amount);
-        } else {
-          otherAmount += amount;
-        }
+      // Add Top 3 to this month's data and the global map
+      for (const cat of top3) {
+        monthlyCategories.set(cat.name, cat.amount);
+        categoriesMap.set(cat.name, cat.name); // Add to global list
       }
 
+      // Add Misc to this month's data and the global map
       if (otherAmount > 0) {
         monthlyCategories.set("Dan Lainnya", otherAmount);
-        categoriesMap.set("Dan Lainnya", "Dan Lainnya"); // Add to global list if it appears
+        categoriesMap.set("Dan Lainnya", "Dan Lainnya"); // Add to global list
       }
 
       monthlyAggregatedData.set(monthKey, monthlyCategories);
@@ -165,7 +145,7 @@ async getTrendDataPerCategory(userId) {
     // 3b. Buat struktur data final untuk chart
     const categoryData = []
 
-    // Use the new aggregated map of priority + Misc names
+    // Use the new aggregated map of Top 3 + Misc names
     for (const categoryName of categoriesMap.keys()) {
       const dataPoints = []
       for (const date of dates) {

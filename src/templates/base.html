@@ -3,8 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{{title}}</title>
-
+    <title>{{ title }}</title>
     <style>
       /* === Reset & Base === */
       body, html {
@@ -115,22 +114,20 @@
   </head>
 
   <body>
-    <div class="email-wrapper">
-      <div class="email-container">
-        <!-- Header -->
-        <div class="email-header">
-          <img src="{{ config.API_BASE_URL }}/assets/finansaku_logo_horizontal.jpg" alt="FinanSaku Logo" />
+    <div class="container">
+      <div class="header">
+        <img
+          src="https://i.imgur.com/L403sN3.png"
+          alt="FinanSaku Logo"
+          style="max-width: 200px; margin-bottom: 20px"
+        />
         </div>
-
-        <!-- Body -->
-        <div class="email-body">
-          {{#block "body"}}{{/block}}
-        </div>
-
-        <!-- Footer -->
-        <div class="email-footer">
-          FinanSaku Team — Coffee Code Community
-        </div>
+      <div class="content">
+        {{{ body }}}
+      </div>
+      <div class="footer">
+        <p>&copy; 2025 FinanSaku. Semua hak cipta dilindungi.</p>
+        <p>Email ini dikirim secara otomatis. Mohon untuk tidak membalas.</p>
       </div>
     </div>
   </body>
