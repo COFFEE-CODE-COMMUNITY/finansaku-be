@@ -51,6 +51,8 @@ export async function loginUser({ email, password }) {
   const user = await prisma.user.findUnique({
     where: { email },
     include: {
+      city: true,
+      template: true,
       saku: {
         orderBy: [
           { year: 'desc' },

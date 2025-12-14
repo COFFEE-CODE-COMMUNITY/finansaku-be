@@ -94,7 +94,9 @@ export const me = async (req, res) => {
     const userWithData = await prisma.user.findUnique({
       where: { id: req.user.id },
       include: {
-        saku: { // Include the saku relation
+        city: true,
+        template: true,
+        saku: {  // Include the saku relation
           orderBy: [ // Order to get the most recent one
             { year: 'desc' },
             { month: 'desc' }
