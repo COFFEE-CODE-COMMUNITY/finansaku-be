@@ -48,7 +48,17 @@ export async function registerUser({ name, username, email, password }) {
 
 // === Authenticate User Login ===
 export async function loginUser({ email, password }) {
-  const user = await prisma.user.findUnique({ where: { email } })
+  const user = await prisma.user.findUnique({
+    where: { email },
+    include: {
+      saku: {
+        orderBy: [
+          { year: 'desc' },
+          { month: 'desc' }
+        ]
+      }
+    }
+  })
   if (!user || !user.password) throw new Error('Invalid email or password')
 
   const valid = await bcrypt.compare(password, user.password)
