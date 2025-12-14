@@ -78,17 +78,17 @@ export const sendEmail = async (to, subject, html) => {
 }
 
 // === Specific template senders ===
-export const sendVerificationEmail = async (to, name, verifyUrl) => {
-  const html = loadTemplate('verify-email', { name, verifyUrl })
+export const sendVerificationEmail = async (to, name, verifyUrl, baseUrl) => {
+  const html = loadTemplate('verify-email', { name, verifyUrl, baseUrl })
   await sendEmail(to, 'Verifikasi Akun FinanSaku Anda', html)
 }
 
-export const sendResetPasswordEmail = async (to, name, resetUrl) => {
-  const html = loadTemplate('reset-password', { name, resetUrl })
+export const sendResetPasswordEmail = async (to, name, resetUrl, baseUrl) => {
+  const html = loadTemplate('reset-password', { name, resetUrl, baseUrl })
   await sendEmail(to, 'Atur Ulang Kata Sandi FinanSaku Anda', html)
 }
 
-export const sendEmailChangeConfirmation = async (to, name, confirmUrl) => {
-  const html = loadTemplate('email-change', { name, confirmUrl })
+export const sendEmailChangeConfirmation = async (to, name, confirmUrl, baseUrl) => {
+  const html = loadTemplate('email-change', { name, confirmUrl, baseUrl })
   await sendEmail(to, 'Konfirmasi Perubahan Email FinanSaku', html)
 }

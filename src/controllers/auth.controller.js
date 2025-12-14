@@ -36,8 +36,11 @@ export const register = async (req, res) => {
         const verifyKey = `verify:${token}`
         await redis.set(verifyKey, String(result.user.id))
         await redis.expire(verifyKey, 60 * 60 * 24)
+
+        const baseUrl = `${req.protocol}://${req.get('host')}`
         const verifyUrl = `${config.CLIENT_VERIFY_URL}?token=${token}`
-        await sendVerificationEmail(email, name, verifyUrl)
+
+        await sendVerificationEmail(email, name, verifyUrl, baseUrl)
       } else {
         log.warn('[VERIFY] Redis disabled — skipping token+email')
       }
@@ -95,8 +98,7 @@ export const me = async (req, res) => {
           orderBy: [ // Order to get the most recent one
             { year: 'desc' },
             { month: 'desc' }
-          ],
-          take: 1 // We only need one to prove they filled out the survey
+          ]
         }
       }
     })
@@ -113,7 +115,7 @@ export const me = async (req, res) => {
       message: 'Authenticated user fetched successfully',
       data: safeUser, // This data now includes the 'saku' array
     })
-  } catch (err) { 
+  } catch (err) {
     log.error('ME_CONTROLLER_ERROR', err) // Add logging
     res.status(500).json({ success: false, message: 'Failed to fetch authenticated user' })
   }
@@ -174,13 +176,25 @@ export const verifyEmail = async (req, res) => {
 
     const { token } = req.query
     const userId = await redis.get(`verify:${token}`)
-    if (!userId)
+
+    if (!userId) {
+      if (req.accepts('html')) {
+         const frontendUrl = config.CLIENT_URL || 'http://localhost:5173'
+         return res.redirect(`${frontendUrl}/login?error=invalid_token`)
+      }
       return res.status(400).json({ success: false, message: 'Invalid or expired verification token' })
+    }
 
     await prisma.user.update({ where: { id: userId }, data: { emailVerifiedAt: new Date() } })
     await redis.del(`verify:${token}`)
 
-    res.status(200).json({ success: true, message: 'Email verified successfully' })
+    if (req.accepts('html')) {
+      const frontendUrl = config.CLIENT_URL || 'http://localhost:5173'
+      return res.redirect(`${frontendUrl}/login?verified=true`)
+    } else {
+      return res.status(200).json({ success: true, message: 'Email verified successfully' })
+    }
+
   } catch (err) {
     const status = err.statusCode || 400
     res.status(status).json({ success: false, message: err.message || 'Failed to verify email' })
@@ -203,8 +217,11 @@ export const resendVerification = async (req, res) => {
     const token = crypto.randomBytes(32).toString('hex')
     await redis.set(`verify:${token}`, String(user.id))
     await redis.expire(`verify:${token}`, 60 * 60 * 24)
+
+    const baseUrl = `${req.protocol}://${req.get('host')}`
     const verifyUrl = `${config.CLIENT_VERIFY_URL}?token=${token}`
-    await sendVerificationEmail(email, user.name, verifyUrl)
+
+    await sendVerificationEmail(email, user.name, verifyUrl, baseUrl)
 
     res.status(200).json({ success: true, message: 'Verification email resent successfully' })
   } catch (err) {
@@ -227,8 +244,11 @@ export const forgotPassword = async (req, res) => {
     const token = crypto.randomBytes(32).toString('hex')
     await redis.set(`reset:${token}`, String(email))
     await redis.expire(`reset:${token}`, 60 * 30)
+
+    const baseUrl = `${req.protocol}://${req.get('host')}`
     const resetUrl = `${config.CLIENT_RESET_URL}?token=${token}`
-    await sendResetPasswordEmail(email, user.name, resetUrl)
+
+    await sendResetPasswordEmail(email, user.name, resetUrl, baseUrl)
 
     res.status(200).json({ success: true, message: 'Password reset email sent successfully' })
   } catch (err) {
