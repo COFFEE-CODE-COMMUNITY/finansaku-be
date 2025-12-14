@@ -18,7 +18,7 @@
       a { text-decoration: none; color: inherit; }
       img { border: none; outline: none; display: block; }
 
-      /* === Layout Classes (MATCHED TO HTML BELOW) === */
+      /* === Layout Classes === */
       .email-wrapper {
         width: 100%;
         padding: 40px 0;
@@ -61,7 +61,6 @@
         background-color: #ffffff;
       }
       
-      /* Helper for buttons inside content */
       .button {
         display: inline-block;
         background-color: #1b263a;
@@ -78,7 +77,6 @@
 
   <body>
     <div class="email-wrapper">
-      
       <div class="email-container">
         
         <div class="email-header">
@@ -89,7 +87,8 @@
         </div>
 
         <div class="email-content">
-          {{{ body }}}
+          {{#block "body"}}
+          {{/block}}
         </div>
 
         <div class="email-footer">

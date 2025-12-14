@@ -89,7 +89,7 @@ app.get("/api/v1/health", async (_req, res) => {
 
 // === API Routes ===
 app.use('/api/v1/auth', authRoutes)
-app.use('/api/v1/users', authenticate, userRoutes)
+app.use('/api/v1/user', authenticate, userRoutes)
 app.use('/api/v1/saku', authenticate, sakuRoutes)
 app.use('/api/v1/umk', authenticate, umkRoutes)
 app.use('/api/v1/allocations', authenticate, allocationRoutes)
