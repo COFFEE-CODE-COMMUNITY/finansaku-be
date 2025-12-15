@@ -33,7 +33,7 @@ export const changeEmail = async (req, res) => {
     await redis.expire(key, 60 * 60 * 24) // 24 hours
 
     const baseUrl = `${req.protocol}://${req.get('host')}`
-    const confirmUrl = `${baseUrl}/api/v1/user/confirm-email-change?token=${token}`
+    const confirmUrl = `${baseUrl}/api/v1/auth/confirm-email-change?token=${token}`
 
     await sendEmailChangeConfirmation(newEmail, user.name, confirmUrl, baseUrl)
 
@@ -55,18 +55,40 @@ export const changeEmail = async (req, res) => {
 export const confirmEmailChange = async (req, res) => {
   try {
     const { token } = req.query
-    if (!token) return fail(res, 'Missing token', 422)
+    const frontendUrl = config.CLIENT_URL || 'https://www.finansaku.space'
+
+    // 1. Handle Missing Token (Redirect to frontend with error)
+    if (!token) {
+      if (req.accepts('html')) {
+        return res.redirect(`${frontendUrl}/setting?error=missing_token`)
+      }
+      return fail(res, 'Missing token', 422)
+    }
 
     const record = await redis.get(`email-change:${token}`)
-    if (!record) return fail(res, 'Invalid or expired token', 400)
+
+    // 2. Handle Invalid/Expired Token (Redirect to frontend with error)
+    if (!record) {
+      if (req.accepts('html')) {
+        return res.redirect(`${frontendUrl}/setting?error=invalid_token`)
+      }
+      return fail(res, 'Invalid or expired token', 400)
+    }
 
     const { userId, newEmail } = JSON.parse(record)
-    if (!userId || !newEmail)
-      return fail(res, 'Invalid token payload', 400)
+    if (!userId || !newEmail) return fail(res, 'Invalid token payload', 400)
 
     const existing = await prisma.user.findUnique({ where: { email: newEmail } })
-    if (existing) return fail(res, 'Email already in use', 409)
 
+    // 3. Handle Email Already Taken (Redirect to frontend with error)
+    if (existing) {
+      if (req.accepts('html')) {
+        return res.redirect(`${frontendUrl}/setting?error=email_taken`)
+      }
+      return fail(res, 'Email already in use', 409)
+    }
+
+    // 4. Update User
     const updated = await prisma.user.update({
       where: { id: userId },
       data: {
@@ -78,15 +100,14 @@ export const confirmEmailChange = async (req, res) => {
 
     await redis.del(`email-change:${token}`)
 
+    // 5. Success Redirect
     if (req.accepts('html')) {
-      const frontendUrl = config.CLIENT_URL || 'https://www.finansaku.space'
       return res.redirect(`${frontendUrl}/setting?emailChanged=true`)
     } else {
       return success(res, 'Email address updated successfully', {
         id: updated.id,
         email: updated.email,
         emailVerifiedAt: updated.emailVerifiedAt,
-        updatedAt: updated.updatedAt,
       })
     }
   } catch (err) {

@@ -12,6 +12,7 @@ import {
 } from '../controllers/auth.controller.js'
 import { authenticate } from '../middlewares/auth.middleware.js'
 import { googleRedirect, googleCallback } from '../controllers/google.controller.js'
+import { confirmEmailChange } from '../controllers/user.controller.js'
 
 const router = express.Router()
 
@@ -33,5 +34,6 @@ router.get('/google/callback', googleCallback)
 router.get('/verify-email', verifyEmail)
 router.post('/forgot-password', forgotPassword)
 router.post('/reset-password', resetPassword)
+router.get('/confirm-email-change', confirmEmailChange)
 
 export default router
