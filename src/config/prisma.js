@@ -1,4 +1,3 @@
-// src/config/prisma.js
 import { PrismaClient } from '@prisma/client'
 import logger from './logger.js'
 

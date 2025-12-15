@@ -28,6 +28,10 @@ export class SurveyService {
     })
     const umkId = umkRecord ? umkRecord.id : null
 
+    await prisma.user.update({
+      where: { id: userId },
+      data: { cityId: city.id }
+    })
 
     // 3) Saku bulan berjalan (find-or-create, lalu update city/salary)
     let saku = await prisma.saku.findFirst({ where: { userId, year, month } })
