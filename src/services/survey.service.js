@@ -4,27 +4,41 @@ import logger from '../config/logger.js'
 
 export class SurveyService {
   async submitSurvey({ userId, cityName, salary, dependents }) {
-    // 1) City (find or create)
-    let city = await prisma.city.findFirst({
+    // 1) City (Strict: Find ONLY, do NOT create)
+    const city = await prisma.city.findFirst({
       where: { name: { equals: cityName, mode: 'insensitive' } },
     })
-    if (!city) city = await prisma.city.create({ data: { name: cityName } })
 
-    // 2) periode berjalan
+    // If city is not found, we STOP here.
+    if (!city) {
+      const err = new Error(`City '${cityName}' not found. Please select a valid city.`)
+      err.statusCode = 404
+      throw err
+    }
+
+    // 2) Periode berjalan
     const now = new Date()
     const year = now.getFullYear()
     const month = now.getMonth() + 1
+
+    // Look up UMK ID
+    const umkRecord = await prisma.uMK.findUnique({
+      where: { cityId_year: { cityId: city.id, year } },
+      select: { id: true }
+    })
+    const umkId = umkRecord ? umkRecord.id : null
+
 
     // 3) Saku bulan berjalan (find-or-create, lalu update city/salary)
     let saku = await prisma.saku.findFirst({ where: { userId, year, month } })
     if (!saku) {
       saku = await prisma.saku.create({
-        data: { userId, cityId: city.id, year, month, salary },
+        data: { userId, cityId: city.id, umkId, year, month, salary },
       })
     } else {
       saku = await prisma.saku.update({
         where: { id: saku.id },
-        data: { cityId: city.id, salary },
+        data: { cityId: city.id, umkId, salary },
       })
     }
 
