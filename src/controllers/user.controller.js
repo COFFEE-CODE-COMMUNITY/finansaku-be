@@ -6,6 +6,7 @@ import { sendEmailChangeConfirmation } from '../utils/mailer.js'
 import { success, fail } from '../utils/response.js'
 import { createLogger } from '../utils/scopedLogger.js'
 import * as authService from '../services/auth.service.js'
+import config from '../config/index.js'
 
 const log = createLogger('USER')
 
@@ -77,12 +78,17 @@ export const confirmEmailChange = async (req, res) => {
 
     await redis.del(`email-change:${token}`)
 
-    return success(res, 'Email address updated successfully', {
-      id: updated.id,
-      email: updated.email,
-      emailVerifiedAt: updated.emailVerifiedAt,
-      updatedAt: updated.updatedAt,
-    })
+    if (req.accepts('html')) {
+      const frontendUrl = config.CLIENT_URL || 'https://www.finansaku.space'
+      return res.redirect(`${frontendUrl}/setting?emailChanged=true`)
+    } else {
+      return success(res, 'Email address updated successfully', {
+        id: updated.id,
+        email: updated.email,
+        emailVerifiedAt: updated.emailVerifiedAt,
+        updatedAt: updated.updatedAt,
+      })
+    }
   } catch (err) {
     log.error('CONFIRM EMAIL CHANGE ERROR', err)
     const status = err.statusCode || 500
