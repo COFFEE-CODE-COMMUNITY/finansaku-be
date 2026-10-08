@@ -1,189 +1,90 @@
-# FinanSaku Backend
+# 💳 FinanSaku — Core Backend API Service
 
-> Status: Active Development (v0.1.0)
+[![Node.js](https://img.shields.io/badge/Node.js-18+-339933?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org/)
+[![Express](https://img.shields.io/badge/Express.js-Backend_Framework-000000?style=flat-square&logo=express)](https://expressjs.com/)
+[![Prisma](https://img.shields.io/badge/Prisma-ORM-2D3748?style=flat-square&logo=prisma)](https://www.prisma.io/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Supabase-4169E1?style=flat-square&logo=postgresql&logoColor=white)](https://supabase.com/)
+[![Redis](https://img.shields.io/badge/Redis-Cache_&_RateLimit-DC382D?style=flat-square&logo=redis&logoColor=white)](https://redis.io/)
+[![CI/CD](https://img.shields.io/badge/CI%2FCD-GitHub_Actions-2088FF?style=flat-square&logo=github-actions&logoColor=white)](.github/workflows)
 
-Backend service for **FinanSaku**, a budgeting and UMK-based financial tracker app by **Coffee Code Community**.
+Core REST API service for **FinanSaku**, an automated personal budgeting and regional minimum wage (UMK)-anchored financial planning platform. 
 
----
-
-## Overview
-
-FinanSaku backend provides:
-
-- User authentication and authorization (JWT + Google OAuth2)
-- Email verification and password recovery
-- Account management (change email & password)
-- UMK and salary data management
-- Automated budget allocation logic
-- Article and announcement management
-- RESTful API for dashboard and frontend integration
+Engineered under the **Coffee Code Community** capstone program.
 
 ---
 
-## Tech Stack
-
-- **Node.js** with **Express**
-- **Prisma ORM**
-- **PostgreSQL** (Supabase)
-- **Redis** for token, caching, and rate-limit store (optional in local)
-- **JWT Authentication**
-- **Nodemailer** for email templates
-- **Pino** for structured logging
-- **PM2 + Nginx** for deployment (`api.finansaku.space`)
+> ⚠️ Developer Note on Documentation & Testing:
+> 
+> The internal markdown guides inside /docs reflect early architecture drafts and are partially legacy. The active codebase (/src) and Prisma schemas serve as the authoritative single source of truth for current API contracts. Please note that the /__tests__ directory is an abandoned work-in-progress and should not be used as a reference.
 
 ---
 
-## Folder Structure
+## 🏛️ System & Infrastructure Architecture
 
-```bash
+Designed around production readiness, test verification, and low-latency data aggregation:
+
+* **Automated CI/CD Pipelines (`.github/workflows/`):** GitHub Actions workflows handle testing, validation checks (`deploy.yml`), and release staging (`release.yml`).
+* **Multi-Tier Caching & Rate-Limiting:** Distributed Redis caching layer prevents redundant database lookups for regional cost-of-living metrics while enforcing endpoint-specific rate thresholds (`express-rate-limit`).
+* **Data Aggregation & Adapter Pattern:** Modular adapters ingest, normalize, and reconcile municipal UMK records across fiscal years (`umk.adapter.js`, `livingcost.adapter.js`).
+* **Automated Test Coverage:** Integration and unit suites built with Jest covering auth token lifecycles, budget allocation rules, and partial aggregator failure resilience.
+* **Dual-Token Authentication Pipeline:** JWT authentication supporting Google OAuth2 federated logins, refresh token rotation, and instant session revocation flags.
+
+---
+
+## 🛠️ Stack
+
+* **Runtime:** Node.js, Express.js
+* **Database:** PostgreSQL (Supabase) with Prisma ORM
+* **Caching & Session Storage:** Redis
+* **Quality Assurance:** Jest, Supertest
+* **Observability:** Pino structured JSON logging
+* **Process Orchestration:** PM2 + Nginx reverse proxy
+
+---
+
+## 📁 Codebase Layout
+
+```text
 finansaku-be/
-├─ prisma/              # Prisma schema & migrations
-├─ src/
-│  ├─ routes/           # Express route definitions
-│  ├─ controllers/      # Handles API logic
-│  ├─ services/         # Business logic
-│  ├─ middlewares/      # Auth / validation middleware
-│  ├─ utils/            # Helpers / utilities (cache, token helpers)
-│  ├─ config/           # Env, logger (Pino), Redis client
-│  ├─ app.js            # Express app (middlewares + routes)
-│  └─ server.js         # HTTP server bootstrap (app.listen)
-├─ .env.example         # Example environment variables
-├─ package.json
-├─ README.md
-└─ docs/                # Project documentation
+├── src/
+│   ├── config/         # Logger, Redis client, Prisma bootstrap
+│   ├── controllers/    # Request dispatchers & status mappers
+│   ├── services/       # Core business logic & financial formulas
+│   │   └── aggregator/ # Data ingestion adapters & CSV normalizers
+│   ├── middlewares/    # JWT guards, role checks, rate limiters
+│   └── utils/          # Token cache, crypt, email dispatchers
+├── prisma/             # Schema definitions, seeders, and migration history
+└── __tests__/          # Automated test specifications
+
 ```
 
 ---
 
-## Setup
+## 🚀 Local Setup
 
 ```bash
-# 1. Install dependencies
+# 1. Install packages
 npm install
 
-# 2. Copy environment file
+# 2. Configure variables
 cp .env.example .env
 
-# 3. Run in development mode
-npm run dev
-```
-
----
-
-## Database (Prisma)
-
-```bash
-# Generate Prisma client
+# 3. Migrate database
 npx prisma generate
-
-# Run local migrations
 npx prisma migrate dev
-```
 
-To view your database in Prisma Studio:
+# 4. Run automated tests
+npm test
 
-```bash
-npx prisma studio
-```
+# 5. Launch development server
+npm run dev
 
-Supabase PostgreSQL is used for remote production deployment.
-
----
-
-## Branch & Commit Conventions
-
-- Commits follow [Conventional Commits](./docs/commit-guide.md)
-- Branch flow:
-
-  - `main` → stable, production-ready branch
-  - `dev` → active development branch
-  - `feat/*` → feature branches for new work (e.g. `feat/auth-login`)
-
-### Example Workflow
-
-```bash
-# Create a new feature branch from dev
-git checkout dev
-git pull origin dev
-git checkout -b feat/feature-name
-
-# Commit and push your changes
-git add .
-git commit -m "feat: add Saku CRUD endpoints"
-git push -u origin feat/feature-name
 ```
 
 ---
 
-## Documentation
+## 📜 License & Attribution
 
-Refer to the [`/docs`](./docs) directory for full details:
+Maintained under the **Coffee Code Community** Capstone Program.
 
-| File                                                    | Description                               |
-| ------------------------------------------------------- | ----------------------------------------- |
-| [`backend-setup.md`](./docs/backend-setup.md)           | Local setup and environment configuration |
-| [`auth.md`](./docs/auth.md)                             | Authentication, JWT, and OAuth2 guide     |
-| [`db-workflow.md`](./docs/db-workflow.md)               | Prisma migration and Supabase workflow    |
-| [`db-schema.md`](./docs/db-schema.md)                   | Database structure and relationships      |
-| [`db-testing.md`](./docs/db-testing.md)                 | Database verification and CRUD testing    |
-| [`google-login-setup.md`](./docs/google-login-setup.md) | Google OAuth2 configuration guide         |
-| [`commit-guide.md`](./docs/commit-guide.md)             | Conventional commit message rules         |
-| [`contribution.md`](./docs/contribution.md)             | Collaboration and merge workflow          |
-| [`project-overview.md`](./docs/project-overview.md)     | General overview and architecture         |
-| [`CHANGELOG.md`](./CHANGELOG.md)                        | Version history and release notes         |
-| [`db_erd.png`](./docs/db_erd.png)                       | Database ERD diagram                      |
-
----
-
-## Monitoring & Logging
-
-The backend uses **Pino** for structured logging.
-
-- Dev: pretty, human-readable logs (`LOG_PRETTY=true`)
-- Prod: JSON logs to STDOUT (managed by **PM2**; rotated via **pm2-logrotate**)
-
-Key envs:
-
-```bash
-LOG_LEVEL=info
-LOG_PRETTY=true
-LOG_WITH_REQ_ID=true
-LOG_REDACT=password,authorization,access_token,refresh_token
-```
-
----
-
-## Security & Rate Limiting
-
-Global and authentication-specific rate limiters are configured via **express-rate-limit**.
-
-### Environment Variables
-
-```bash
-RATE_LIMIT_GLOBAL=100
-RATE_LIMIT_AUTH=10
-RATE_LIMIT_WINDOW_MS=60000
-```
-
-### Optional Redis Persistence
-
-To enable distributed rate limiting and caching:
-
-```bash
-ENABLE_REDIS=true
-REDIS_URL=redis://:password@127.0.0.1:6379
-```
-
-Health check endpoint:
-
-```bash
-GET /api/v1/health  # returns uptime + Redis status (healthy|unreachable|disabled)
-```
-
----
-
-## License
-
-This project is maintained under the **Coffee Code Community** capstone program.
-© 2025 Coffee Code Community — FinanSaku Backend Team
-For inquiries or collaboration, please contact the backend maintainers.
+© FinanSaku Backend Engineering Team.
